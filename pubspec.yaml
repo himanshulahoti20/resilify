@@ -1,0 +1,32 @@
+name: resilify
+description: Unified Result-based API handling for Dart & Flutter — works with http, Dio, Retrofit, Chopper, and WebSocket. No exceptions. Just results.
+version: 1.0.0
+homepage: https://github.com/himanshulahoti20/resilify
+repository: https://github.com/himanshulahoti20/resilify
+issue_tracker: https://github.com/himanshulahoti20/resilify/issues
+
+environment:
+  sdk: ^3.0.0
+
+dependencies:
+  chopper: ^8.0.0
+  dio: ^5.4.0
+  http: ^1.2.0
+  retrofit: ^4.1.0
+  web_socket_channel: ^3.0.0
+
+dev_dependencies:
+  build_runner: ^2.4.0
+  chopper_generator: ^8.0.0
+  json_serializable: ^6.7.0
+  lints: ^4.0.0
+  mocktail: ^1.0.0
+  retrofit_generator: ^8.0.0
+  test: ^1.25.0
+
+topics:
+  - result
+  - error-handling
+  - dio
+  - http
+  - websocket
