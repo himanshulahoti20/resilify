@@ -4,7 +4,7 @@
 [![pub points](https://img.shields.io/pub/points/resilify)](https://pub.dev/packages/resilify/score)
 [![pub likes](https://img.shields.io/pub/likes/resilify)](https://pub.dev/packages/resilify/score)
 [![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-![CI](https://github.com/himanshulahoti20/resilify/actions/workflows/dart_ci.yml/badge.svg)
+![CI](https://github.com/himanshulahoti20/resilify/actions/workflows/dart_ci.yml/badge.svg?branch=main&cache_bust=1)
 
 > **No exceptions. Just results.**
 
