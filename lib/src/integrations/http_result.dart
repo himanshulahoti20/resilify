@@ -180,7 +180,8 @@ class HttpResultHandler {
 
       if (response.statusCode >= 200 && response.statusCode < 300) {
         try {
-          final decoded = response.body.isEmpty ? null : jsonDecode(response.body);
+          final decoded =
+              response.body.isEmpty ? null : jsonDecode(response.body);
           return Success<T>(parser(decoded));
         } catch (e, st) {
           return Error<T>(Failure.parsing(cause: e, stackTrace: st));
@@ -225,7 +226,8 @@ class HttpResultHandler {
       404 => Failure.notFound(cause: response.body),
       >= 500 && < 600 =>
         Failure.serverError(code: code, message: message, cause: response.body),
-      _ => Failure.badResponse(code: code, message: message, cause: response.body),
+      _ =>
+        Failure.badResponse(code: code, message: message, cause: response.body),
     };
   }
 }

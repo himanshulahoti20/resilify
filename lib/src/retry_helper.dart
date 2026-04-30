@@ -47,9 +47,8 @@ abstract final class RetryHelper {
 
       onRetry?.call(attempt, failure);
 
-      final waitMicros = (delay.inMicroseconds *
-              _pow(backoffFactor, attempt - 1))
-          .round();
+      final waitMicros =
+          (delay.inMicroseconds * _pow(backoffFactor, attempt - 1)).round();
       await Future<void>.delayed(Duration(microseconds: waitMicros));
     }
     // Unreachable: the loop above always returns once it exits.

@@ -78,12 +78,10 @@ final class Success<T> extends Result<T> {
       onSuccess(data);
 
   @override
-  Result<R> map<R>(R Function(T data) transform) =>
-      Success<R>(transform(data));
+  Result<R> map<R>(R Function(T data) transform) => Success<R>(transform(data));
 
   @override
-  Result<R> flatMap<R>(Result<R> Function(T data) transform) =>
-      transform(data);
+  Result<R> flatMap<R>(Result<R> Function(T data) transform) => transform(data);
 
   @override
   bool operator ==(Object other) {

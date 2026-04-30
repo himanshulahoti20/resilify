@@ -23,7 +23,8 @@ Future<void> main() async {
     channelFactory: () => WebSocketChannel.connect(
       Uri.parse('wss://example.com/ticks'),
     ),
-    parser: (raw) => Tick.fromJson(jsonDecode(raw as String) as Map<String, dynamic>),
+    parser: (raw) =>
+        Tick.fromJson(jsonDecode(raw as String) as Map<String, dynamic>),
     reconnect: const ReconnectConfig(
       initialDelay: Duration(seconds: 1),
       maxDelay: Duration(seconds: 30),

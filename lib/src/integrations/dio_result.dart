@@ -219,10 +219,9 @@ Failure mapDioException(DioException e, [StackTrace? stackTrace]) {
     DioExceptionType.sendTimeout ||
     DioExceptionType.receiveTimeout =>
       Failure.timeout(cause: e, stackTrace: st),
-    DioExceptionType.cancel =>
-      Failure.cancelled(cause: e, stackTrace: st),
-    DioExceptionType.connectionError =>
-      Failure.network(message: e.message ?? 'Connection error', cause: e, stackTrace: st),
+    DioExceptionType.cancel => Failure.cancelled(cause: e, stackTrace: st),
+    DioExceptionType.connectionError => Failure.network(
+        message: e.message ?? 'Connection error', cause: e, stackTrace: st),
     DioExceptionType.badCertificate =>
       Failure.network(message: 'Bad certificate', cause: e, stackTrace: st),
     DioExceptionType.badResponse => switch (status) {
@@ -237,7 +236,7 @@ Failure mapDioException(DioException e, [StackTrace? stackTrace]) {
             stackTrace: st,
           ),
       },
-    DioExceptionType.unknown =>
-      Failure.unknown(message: e.message ?? 'Unknown error', cause: e, stackTrace: st),
+    DioExceptionType.unknown => Failure.unknown(
+        message: e.message ?? 'Unknown error', cause: e, stackTrace: st),
   };
 }

@@ -57,8 +57,7 @@ class ResultLoggerInterceptor extends Interceptor {
     RequestInterceptorHandler handler,
   ) {
     if (logRequest) {
-      final box = _Box('REQUEST')
-        ..line('${options.method} ${options.uri}');
+      final box = _Box('REQUEST')..line('${options.method} ${options.uri}');
       if (logHeaders) box.section('Headers', options.headers);
       if (logBody && options.data != null) {
         box.section('Body', options.data);
@@ -93,7 +92,8 @@ class ResultLoggerInterceptor extends Interceptor {
   void onError(DioException err, ErrorInterceptorHandler handler) {
     if (logError) {
       final box = _Box('ERROR')
-        ..line('${err.type} ${err.requestOptions.method} ${err.requestOptions.uri}')
+        ..line(
+            '${err.type} ${err.requestOptions.method} ${err.requestOptions.uri}')
         ..line('Message: ${err.message ?? '<none>'}');
       final response = err.response;
       if (response != null) {

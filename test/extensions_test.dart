@@ -39,8 +39,7 @@ void main() {
       expect(seen, 9);
 
       Failure? captured;
-      const Error<int>(Failure.notFound())
-          .onError((f) => captured = f);
+      const Error<int>(Failure.notFound()).onError((f) => captured = f);
       expect(captured?.code, 404);
     });
   });
