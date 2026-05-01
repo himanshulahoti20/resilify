@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 1.0.1
+
+### Added
+
+- `Result.tryRun` and `Result.tryRunAsync` — bridge throwing code into a
+  `Result<T>` without writing try/catch at call sites. Both accept an
+  optional `onError` to translate the caught object into a domain-specific
+  `Failure`.
+- `mapError` on `Result<T>` — transform the wrapped `Failure` without
+  touching the success path. Useful for translating low-level transport
+  failures into domain failures.
+- `errorOrThrow` extension — symmetric counterpart to `getOrThrow`,
+  returning the wrapped `Failure` or throwing a `StateError` on `Success`.
+
 ## 1.0.0 — Initial release
 
 ### Added

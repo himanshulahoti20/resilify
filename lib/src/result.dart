@@ -32,6 +32,37 @@ sealed class Result<T> {
   /// Wraps [failure] in an error result.
   const factory Result.error(Failure failure) = Error<T>;
 
+  /// Runs [action] and wraps its return value in a [Success], catching any
+  /// thrown object and converting it via [onError] (defaulting to
+  /// [Failure.unknown]) into an [Error].
+  static Result<T> tryRun<T>(
+    T Function() action, {
+    Failure Function(Object error, StackTrace stackTrace)? onError,
+  }) {
+    try {
+      return Success<T>(action());
+    } catch (e, st) {
+      final failure = onError?.call(e, st) ??
+          Failure.unknown(message: e.toString(), stackTrace: st, cause: e);
+      return Error<T>(failure);
+    }
+  }
+
+  /// Async counterpart to [tryRun]. Awaits [action] and converts thrown
+  /// objects into an [Error] via [onError] (defaulting to [Failure.unknown]).
+  static Future<Result<T>> tryRunAsync<T>(
+    Future<T> Function() action, {
+    Failure Function(Object error, StackTrace stackTrace)? onError,
+  }) async {
+    try {
+      return Success<T>(await action());
+    } catch (e, st) {
+      final failure = onError?.call(e, st) ??
+          Failure.unknown(message: e.toString(), stackTrace: st, cause: e);
+      return Error<T>(failure);
+    }
+  }
+
   /// Pattern-matches on the variant, calling [success] or [error] and
   /// returning the produced value.
   R when<R>({
@@ -53,6 +84,13 @@ sealed class Result<T> {
   /// Like [map] but the [transform] returns its own [Result], allowing
   /// failures to short-circuit without nesting `Result<Result<R>>`.
   Result<R> flatMap<R>(Result<R> Function(T data) transform);
+
+  /// If this is an [Error], applies [transform] to the failure and wraps the
+  /// outcome in a new [Error]. Otherwise propagates the [Success] unchanged.
+  ///
+  /// Useful for translating low-level failures (e.g. a transport-level
+  /// `Failure.network`) into a domain-specific failure before it bubbles up.
+  Result<T> mapError(Failure Function(Failure failure) transform);
 }
 
 /// The successful variant of a [Result].
@@ -82,6 +120,9 @@ final class Success<T> extends Result<T> {
 
   @override
   Result<R> flatMap<R>(Result<R> Function(T data) transform) => transform(data);
+
+  @override
+  Result<T> mapError(Failure Function(Failure failure) transform) => this;
 
   @override
   bool operator ==(Object other) {
@@ -127,6 +168,10 @@ final class Error<T> extends Result<T> {
   @override
   Result<R> flatMap<R>(Result<R> Function(T data) transform) =>
       Error<R>(failure);
+
+  @override
+  Result<T> mapError(Failure Function(Failure failure) transform) =>
+      Error<T>(transform(failure));
 
   @override
   bool operator ==(Object other) {
