@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 1.0.3
+
+### Added
+
+- `Result.fromNullable<T>(T?, {Failure Function()? onNull})` — bridge
+  nullable APIs (cache lookups, `firstWhereOrNull`, etc.) into a `Result<T>`
+  in one call.
+- `Result.zip2` and `Result.zip3` — combine multiple results into a record
+  (`Result<(A, B)>` / `Result<(A, B, C)>`), short-circuiting on the first
+  failure left-to-right. Handy for parallel fetches with `Future.wait`.
+- `Result.collect<T>(Iterable<Result<T>>)` — fold a list of results into a
+  single `Result<List<T>>`, returning the first failure encountered.
+- `recoverWith` extension on `Future<Result<T>>` — like `recover`, but the
+  fallback callback may itself return a `Result` (so a fallback network
+  call that also fails is surfaced as the final error).
+- `mapErrorAsync` extension on `Future<Result<T>>` — async counterpart to
+  the synchronous `Result.mapError`.
+
+### Changed
+
+- `RetryHelper.retry` now accepts `attemptTimeout`. When set, each attempt
+  is wrapped in `Future.timeout`; an exceeded timeout is converted into an
+  `Error(Failure.timeout())` and goes through the normal `retryIf` /
+  `maxAttempts` machinery.
+
 ## 1.0.2
 
 ### Added

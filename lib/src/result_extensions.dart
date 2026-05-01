@@ -120,6 +120,31 @@ extension FutureResultX<T> on Future<Result<T>> {
       Error<T>(:final failure) => Success<T>(await recovery(failure)),
     };
   }
+
+  /// Like [recover], but the [recovery] callback may itself fail by returning
+  /// another [Result]. Use this when the fallback is another network call or
+  /// any operation that can return its own [Failure].
+  Future<Result<T>> recoverWith(
+    Future<Result<T>> Function(Failure failure) recovery,
+  ) async {
+    final result = await this;
+    return switch (result) {
+      Success<T>() => result,
+      Error<T>(:final failure) => await recovery(failure),
+    };
+  }
+
+  /// Async counterpart to the synchronous `Result.mapError`. Transforms the
+  /// wrapped [Failure] using an async [transform], leaving [Success] alone.
+  Future<Result<T>> mapErrorAsync(
+    Future<Failure> Function(Failure failure) transform,
+  ) async {
+    final result = await this;
+    return switch (result) {
+      Success<T>() => result,
+      Error<T>(:final failure) => Error<T>(await transform(failure)),
+    };
+  }
 }
 
 /// Thrown by [ResultX.getOrThrow] when called on an [Error].

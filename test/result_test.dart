@@ -185,4 +185,99 @@ void main() {
       expect(r.flatten(), const Error<int>(Failure.unauthorized()));
     });
   });
+
+  group('Result.fromNullable', () {
+    test('non-null becomes Success', () {
+      expect(Result.fromNullable<int>(7), const Success<int>(7));
+    });
+
+    test('null becomes Error with default failure', () {
+      final r = Result.fromNullable<int>(null);
+      expect(r.isError, isTrue);
+      expect(r.errorOrNull!.message, 'Value was null');
+    });
+
+    test('null honors caller-supplied onNull', () {
+      final r = Result.fromNullable<int>(
+        null,
+        onNull: () => const Failure.notFound(message: 'no user'),
+      );
+      expect(r.errorOrNull!.code, 404);
+      expect(r.errorOrNull!.message, 'no user');
+    });
+  });
+
+  group('Result.zip2 / zip3', () {
+    test('zip2 combines two Successes into a record', () {
+      final r = Result.zip2<int, String>(
+        const Success<int>(1),
+        const Success<String>('a'),
+      );
+      expect(r, const Success<(int, String)>((1, 'a')));
+    });
+
+    test('zip2 short-circuits on first Error', () {
+      const f = Failure.notFound();
+      final r = Result.zip2<int, String>(
+        const Error<int>(f),
+        const Success<String>('a'),
+      );
+      expect(r, const Error<(int, String)>(f));
+    });
+
+    test('zip2 returns the second Error when first is Success', () {
+      const f = Failure.unauthorized();
+      final r = Result.zip2<int, String>(
+        const Success<int>(1),
+        const Error<String>(f),
+      );
+      expect(r.errorOrNull, f);
+    });
+
+    test('zip3 combines three Successes', () {
+      final r = Result.zip3<int, String, bool>(
+        const Success<int>(1),
+        const Success<String>('a'),
+        const Success<bool>(true),
+      );
+      expect(r, const Success<(int, String, bool)>((1, 'a', true)));
+    });
+
+    test('zip3 returns first Error left-to-right', () {
+      const f = Failure.notFound();
+      final r = Result.zip3<int, String, bool>(
+        const Success<int>(1),
+        const Error<String>(f),
+        const Error<bool>(Failure.unauthorized()),
+      );
+      expect(r.errorOrNull, f);
+    });
+  });
+
+  group('Result.collect', () {
+    test('all Successes => Success<List>', () {
+      final r = Result.collect<int>([
+        const Success<int>(1),
+        const Success<int>(2),
+        const Success<int>(3),
+      ]);
+      expect(r.isSuccess, isTrue);
+      expect(r.dataOrNull, equals([1, 2, 3]));
+    });
+
+    test('first Error short-circuits the list', () {
+      const f = Failure.notFound();
+      final r = Result.collect<int>([
+        const Success<int>(1),
+        const Error<int>(f),
+        const Success<int>(3),
+      ]);
+      expect(r, const Error<List<int>>(f));
+    });
+
+    test('empty input becomes empty Success', () {
+      final r = Result.collect<int>(const <Result<int>>[]);
+      expect(r.dataOrNull, isEmpty);
+    });
+  });
 }

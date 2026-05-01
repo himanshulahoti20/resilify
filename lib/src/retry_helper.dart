@@ -32,6 +32,12 @@ abstract final class RetryHelper {
   /// 130% of the backed-off delay. Defaults to `0.0` (no jitter). Useful for
   /// preventing many clients from retrying in lockstep after a shared
   /// outage. Pass [random] to make the jitter deterministic in tests.
+  ///
+  /// [attemptTimeout] bounds each individual attempt. If [operation] does
+  /// not produce a [Result] within this duration, the attempt is converted
+  /// into an `Error(Failure.timeout())` and is subject to the normal
+  /// [retryIf] / [maxAttempts] logic. Leave `null` to wait indefinitely on
+  /// each attempt.
   static Future<Result<T>> retry<T>(
     Future<Result<T>> Function() operation, {
     int maxAttempts = 3,
@@ -40,6 +46,7 @@ abstract final class RetryHelper {
     Duration? maxDelay,
     double jitter = 0.0,
     Random? random,
+    Duration? attemptTimeout,
     bool Function(Failure failure)? retryIf,
     void Function(int attempt, Failure failure)? onRetry,
   }) async {
@@ -51,7 +58,20 @@ abstract final class RetryHelper {
 
     Result<T>? last;
     for (var attempt = 1; attempt <= maxAttempts; attempt++) {
-      final result = await operation();
+      Result<T> result;
+      try {
+        result = attemptTimeout != null
+            ? await operation().timeout(attemptTimeout)
+            : await operation();
+      } on TimeoutException catch (e, st) {
+        result = Error<T>(
+          Failure.timeout(
+            message: 'Attempt timed out after $attemptTimeout',
+            stackTrace: st,
+            cause: e,
+          ),
+        );
+      }
       last = result;
 
       if (result is Success<T>) return result;

@@ -63,6 +63,64 @@ sealed class Result<T> {
     }
   }
 
+  /// Wraps a nullable [value] in a [Success] if non-null, otherwise produces
+  /// an [Error] with the failure returned by [onNull] (defaulting to a
+  /// generic `Failure(message: 'Value was null')`). Handy for bridging APIs
+  /// that signal absence with `null` (cache lookups, `firstWhereOrNull`).
+  static Result<T> fromNullable<T>(
+    T? value, {
+    Failure Function()? onNull,
+  }) {
+    if (value != null) return Success<T>(value);
+    return Error<T>(
+      onNull?.call() ?? const Failure(message: 'Value was null'),
+    );
+  }
+
+  /// Combines two [Result]s into a `Result<(A, B)>`. Returns the first
+  /// [Error] encountered (left-to-right), or a [Success] containing both
+  /// values as a record.
+  static Result<(A, B)> zip2<A, B>(Result<A> a, Result<B> b) {
+    if (a is Error<A>) return Error<(A, B)>(a.failure);
+    if (b is Error<B>) return Error<(A, B)>(b.failure);
+    return Success<(A, B)>(((a as Success<A>).data, (b as Success<B>).data));
+  }
+
+  /// Combines three [Result]s into a `Result<(A, B, C)>`. Returns the first
+  /// [Error] encountered (left-to-right).
+  static Result<(A, B, C)> zip3<A, B, C>(
+    Result<A> a,
+    Result<B> b,
+    Result<C> c,
+  ) {
+    if (a is Error<A>) return Error<(A, B, C)>(a.failure);
+    if (b is Error<B>) return Error<(A, B, C)>(b.failure);
+    if (c is Error<C>) return Error<(A, B, C)>(c.failure);
+    return Success<(A, B, C)>(
+      (
+        (a as Success<A>).data,
+        (b as Success<B>).data,
+        (c as Success<C>).data,
+      ),
+    );
+  }
+
+  /// Collapses an iterable of [Result]s into a single `Result<List<T>>`.
+  /// Short-circuits on the first [Error]; otherwise returns a list of all
+  /// successful values in iteration order.
+  static Result<List<T>> collect<T>(Iterable<Result<T>> results) {
+    final out = <T>[];
+    for (final r in results) {
+      switch (r) {
+        case Success<T>(:final data):
+          out.add(data);
+        case Error<T>(:final failure):
+          return Error<List<T>>(failure);
+      }
+    }
+    return Success<List<T>>(List.unmodifiable(out));
+  }
+
   /// Pattern-matches on the variant, calling [success] or [error] and
   /// returning the produced value.
   R when<R>({
