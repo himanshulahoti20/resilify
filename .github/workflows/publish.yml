@@ -1,13 +1,65 @@
 # .github/workflows/publish.yml
+# Publishes resilify to pub.dev when pubspec.yaml version changes on main.
+
 name: Publish to pub.dev
 
 on:
   push:
-    tags:
-      - "v*" # v1.0.0, v1.2.3, v2.0.0-beta.1, etc.
+    branches: [main]
+    paths:
+      - "pubspec.yaml" # only run when this file changes
 
 jobs:
-  publish:
+  check-version:
+    name: Check if version changed
+    runs-on: ubuntu-latest
+    outputs:
+      should_publish: ${{ steps.check.outputs.should_publish }}
+      version: ${{ steps.check.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2 # need previous commit to diff
+
+      - name: Compare versions
+        id: check
+        run: |
+          NEW_VERSION=$(grep '^version:' pubspec.yaml | sed 's/version: *//' | tr -d ' ')
+          OLD_VERSION=$(git show HEAD~1:pubspec.yaml 2>/dev/null | grep '^version:' | sed 's/version: *//' | tr -d ' ' || echo "")
+          echo "Old: $OLD_VERSION  →  New: $NEW_VERSION"
+          if [ "$NEW_VERSION" != "$OLD_VERSION" ] && [ -n "$NEW_VERSION" ]; then
+            echo "should_publish=true" >> $GITHUB_OUTPUT
+            echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          else
+            echo "should_publish=false" >> $GITHUB_OUTPUT
+          fi
+
+  tag-and-publish:
+    name: Tag and publish
+    needs: check-version
+    if: needs.check-version.outputs.should_publish == 'true'
+    runs-on: ubuntu-latest
     permissions:
-      id-token: write # REQUIRED: lets GitHub mint the OIDC token for pub.dev
-    uses: dart-lang/setup-dart/.github/workflows/publish.yml@v1
+      id-token: write # for OIDC to pub.dev
+      contents: write # to push the tag
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create and push tag
+        env:
+          VERSION: ${{ needs.check-version.outputs.version }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "v$VERSION" -m "Release v$VERSION"
+          git push origin "v$VERSION"
+
+      - name: Setup Dart
+        uses: dart-lang/setup-dart@v1
+
+      - name: Install dependencies
+        run: dart pub get
+
+      - name: Publish (OIDC, no token needed)
+        run: dart pub publish --force
