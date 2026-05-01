@@ -59,10 +59,34 @@ class Failure {
     this.cause,
   });
 
+  /// HTTP 403 — the server understood the request but refuses to authorize it.
+  const Failure.forbidden({
+    this.message = 'Forbidden',
+    this.code = 403,
+    this.stackTrace,
+    this.cause,
+  });
+
   /// HTTP 404 — the target resource does not exist.
   const Failure.notFound({
     this.message = 'Resource not found',
     this.code = 404,
+    this.stackTrace,
+    this.cause,
+  });
+
+  /// HTTP 409 — the request conflicts with the current state of the resource.
+  const Failure.conflict({
+    this.message = 'Conflict',
+    this.code = 409,
+    this.stackTrace,
+    this.cause,
+  });
+
+  /// HTTP 429 — too many requests; the client should back off.
+  const Failure.rateLimit({
+    this.message = 'Rate limit exceeded',
+    this.code = 429,
     this.stackTrace,
     this.cause,
   });
@@ -90,6 +114,95 @@ class Failure {
     this.stackTrace,
     this.cause,
   });
+
+  /// Maps an HTTP status [code] onto the most specific named [Failure]
+  /// constructor available, falling back to [Failure.badResponse] for any
+  /// other 4xx and [Failure.serverError] for any other 5xx. Codes outside the
+  /// 4xx/5xx ranges produce a generic [Failure].
+  factory Failure.fromStatusCode(
+    int code, {
+    String? message,
+    StackTrace? stackTrace,
+    Object? cause,
+  }) {
+    switch (code) {
+      case 401:
+        return Failure.unauthorized(
+          message: message ?? 'Unauthorized',
+          stackTrace: stackTrace,
+          cause: cause,
+        );
+      case 403:
+        return Failure.forbidden(
+          message: message ?? 'Forbidden',
+          stackTrace: stackTrace,
+          cause: cause,
+        );
+      case 404:
+        return Failure.notFound(
+          message: message ?? 'Resource not found',
+          stackTrace: stackTrace,
+          cause: cause,
+        );
+      case 408:
+        return Failure.timeout(
+          message: message ?? 'Operation timed out',
+          stackTrace: stackTrace,
+          cause: cause,
+        );
+      case 409:
+        return Failure.conflict(
+          message: message ?? 'Conflict',
+          stackTrace: stackTrace,
+          cause: cause,
+        );
+      case 429:
+        return Failure.rateLimit(
+          message: message ?? 'Rate limit exceeded',
+          stackTrace: stackTrace,
+          cause: cause,
+        );
+    }
+    if (code >= 500 && code < 600) {
+      return Failure.serverError(
+        message: message ?? 'Server error',
+        code: code,
+        stackTrace: stackTrace,
+        cause: cause,
+      );
+    }
+    if (code >= 400 && code < 500) {
+      return Failure.badResponse(
+        message: message ?? 'Bad response',
+        code: code,
+        stackTrace: stackTrace,
+        cause: cause,
+      );
+    }
+    return Failure(
+      message: message ?? 'HTTP $code',
+      code: code,
+      stackTrace: stackTrace,
+      cause: cause,
+    );
+  }
+
+  /// Whether [code] sits in the 4xx range.
+  bool get is4xx => code != null && code! >= 400 && code! < 500;
+
+  /// Whether [code] sits in the 5xx range.
+  bool get is5xx => code != null && code! >= 500 && code! < 600;
+
+  /// Whether this failure looks transient and worth retrying — true for any
+  /// 5xx, plus 408 (timeout) and 429 (rate limit). Failures with no [code]
+  /// (network, parsing, cancelled, unknown) are *not* assumed retryable here
+  /// because they cannot be distinguished from each other by code alone;
+  /// callers who want network-level retries should pass a custom `retryIf`
+  /// that inspects [cause].
+  bool get isRetryable {
+    if (is5xx) return true;
+    return code == 408 || code == 429;
+  }
 
   /// Optional protocol- or domain-specific code (typically the HTTP status).
   final int? code;

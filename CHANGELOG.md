@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 1.0.2
+
+### Added
+
+- New `Failure` named constructors: `Failure.forbidden` (403),
+  `Failure.conflict` (409), and `Failure.rateLimit` (429).
+- `Failure.fromStatusCode(int)` — picks the most specific named constructor
+  for a given HTTP status, falling back to `badResponse` for other 4xx and
+  `serverError` for other 5xx.
+- `Failure.is4xx`, `Failure.is5xx`, and `Failure.isRetryable` getters —
+  drop-in predicates for `RetryHelper.retryIf`.
+- `onComplete` extension on `Result<T>` — finally-style hook that fires for
+  both `Success` and `Error`.
+- `flatten()` extension on `Result<Result<T>>` — collapses one layer of
+  nesting that `flatMap` chains often produce.
+
+### Changed
+
+- `RetryHelper.retry` now accepts `maxDelay` to cap the wait between
+  attempts and `jitter` (with an optional `Random`) to spread retries and
+  prevent thundering-herd retry storms. Both default to no-op behavior, so
+  existing call sites are unaffected.
+
 ## 1.0.1
 
 ### Added
