@@ -148,4 +148,41 @@ void main() {
       );
     });
   });
+
+  group('onComplete', () {
+    test('fires on Success and returns the same result', () {
+      var fired = 0;
+      const r = Success<int>(1);
+      final out = r.onComplete(() => fired++);
+      expect(fired, 1);
+      expect(identical(out, r), isTrue);
+    });
+
+    test('fires on Error and returns the same result', () {
+      var fired = 0;
+      const r = Error<int>(Failure.notFound());
+      final out = r.onComplete(() => fired++);
+      expect(fired, 1);
+      expect(identical(out, r), isTrue);
+    });
+  });
+
+  group('flatten', () {
+    test('collapses nested Success', () {
+      const Result<Result<int>> r = Success<Result<int>>(Success<int>(7));
+      expect(r.flatten(), const Success<int>(7));
+    });
+
+    test('preserves inner Error when outer is Success', () {
+      const Result<Result<int>> r =
+          Success<Result<int>>(Error<int>(Failure.notFound()));
+      expect(r.flatten(), const Error<int>(Failure.notFound()));
+    });
+
+    test('propagates outer Error', () {
+      const Result<Result<int>> r =
+          Error<Result<int>>(Failure.unauthorized());
+      expect(r.flatten(), const Error<int>(Failure.unauthorized()));
+    });
+  });
 }

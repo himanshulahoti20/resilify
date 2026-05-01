@@ -26,6 +26,98 @@ void main() {
     test('parsing carries default message', () {
       expect(const Failure.parsing().message, 'Failed to parse response');
     });
+
+    test('forbidden has 403', () {
+      expect(const Failure.forbidden().code, 403);
+    });
+
+    test('conflict has 409', () {
+      expect(const Failure.conflict().code, 409);
+    });
+
+    test('rateLimit has 429', () {
+      expect(const Failure.rateLimit().code, 429);
+    });
+  });
+
+  group('Failure.fromStatusCode', () {
+    test('maps 401 to unauthorized', () {
+      expect(Failure.fromStatusCode(401).code, 401);
+      expect(Failure.fromStatusCode(401).message, 'Unauthorized');
+    });
+
+    test('maps 403 to forbidden', () {
+      expect(Failure.fromStatusCode(403).code, 403);
+    });
+
+    test('maps 404 to notFound', () {
+      expect(Failure.fromStatusCode(404).code, 404);
+    });
+
+    test('maps 408 to timeout', () {
+      expect(Failure.fromStatusCode(408).code, 408);
+    });
+
+    test('maps 409 to conflict', () {
+      expect(Failure.fromStatusCode(409).code, 409);
+    });
+
+    test('maps 429 to rateLimit', () {
+      expect(Failure.fromStatusCode(429).code, 429);
+    });
+
+    test('preserves the actual 5xx code', () {
+      expect(Failure.fromStatusCode(503).code, 503);
+      expect(Failure.fromStatusCode(503).is5xx, isTrue);
+    });
+
+    test('preserves an unmapped 4xx code as badResponse', () {
+      final f = Failure.fromStatusCode(418);
+      expect(f.code, 418);
+      expect(f.is4xx, isTrue);
+    });
+
+    test('uses caller-supplied message when provided', () {
+      expect(Failure.fromStatusCode(404, message: 'gone').message, 'gone');
+    });
+
+    test('non-HTTP code falls back to generic Failure', () {
+      final f = Failure.fromStatusCode(200);
+      expect(f.is4xx, isFalse);
+      expect(f.is5xx, isFalse);
+      expect(f.code, 200);
+    });
+  });
+
+  group('Failure.is4xx / is5xx / isRetryable', () {
+    test('is4xx covers the 4xx range', () {
+      expect(const Failure.notFound().is4xx, isTrue);
+      expect(const Failure.serverError().is4xx, isFalse);
+      expect(const Failure.network().is4xx, isFalse);
+    });
+
+    test('is5xx covers the 5xx range', () {
+      expect(const Failure.serverError().is5xx, isTrue);
+      expect(const Failure.notFound().is5xx, isFalse);
+    });
+
+    test('isRetryable is true for 5xx, 408, 429', () {
+      expect(const Failure.serverError().isRetryable, isTrue);
+      expect(const Failure.timeout().isRetryable, isTrue);
+      expect(const Failure.rateLimit().isRetryable, isTrue);
+    });
+
+    test('isRetryable is false for 4xx (except 408 / 429)', () {
+      expect(const Failure.unauthorized().isRetryable, isFalse);
+      expect(const Failure.forbidden().isRetryable, isFalse);
+      expect(const Failure.notFound().isRetryable, isFalse);
+      expect(const Failure.conflict().isRetryable, isFalse);
+    });
+
+    test('isRetryable is false for code-less failures by default', () {
+      expect(const Failure.network().isRetryable, isFalse);
+      expect(const Failure.parsing().isRetryable, isFalse);
+    });
   });
 
   group('copyWith', () {

@@ -2,6 +2,7 @@
 library;
 
 import 'dart:async';
+import 'dart:math';
 
 import 'failure.dart';
 import 'result.dart';
@@ -21,16 +22,32 @@ abstract final class RetryHelper {
   /// [onRetry] is invoked *after* a failure that will be retried, with the
   /// 1-based attempt number that failed and the failure itself. It is *not*
   /// invoked for the final failure or for a [Success].
+  ///
+  /// [maxDelay] caps the wait between attempts after exponential backoff is
+  /// applied. Use this to bound the worst-case wait when [maxAttempts] and
+  /// [backoffFactor] are both large.
+  ///
+  /// [jitter] adds randomness in the range `[0, jitter]` as a multiplier on
+  /// the computed wait — e.g. `jitter: 0.3` produces waits between 100% and
+  /// 130% of the backed-off delay. Defaults to `0.0` (no jitter). Useful for
+  /// preventing many clients from retrying in lockstep after a shared
+  /// outage. Pass [random] to make the jitter deterministic in tests.
   static Future<Result<T>> retry<T>(
     Future<Result<T>> Function() operation, {
     int maxAttempts = 3,
     Duration delay = const Duration(milliseconds: 500),
     double backoffFactor = 2.0,
+    Duration? maxDelay,
+    double jitter = 0.0,
+    Random? random,
     bool Function(Failure failure)? retryIf,
     void Function(int attempt, Failure failure)? onRetry,
   }) async {
     assert(maxAttempts > 0, 'maxAttempts must be > 0');
     assert(backoffFactor > 0, 'backoffFactor must be > 0');
+    assert(jitter >= 0, 'jitter must be >= 0');
+
+    final rng = random ?? Random();
 
     Result<T>? last;
     for (var attempt = 1; attempt <= maxAttempts; attempt++) {
@@ -47,8 +64,14 @@ abstract final class RetryHelper {
 
       onRetry?.call(attempt, failure);
 
-      final waitMicros =
+      var waitMicros =
           (delay.inMicroseconds * _pow(backoffFactor, attempt - 1)).round();
+      if (maxDelay != null && waitMicros > maxDelay.inMicroseconds) {
+        waitMicros = maxDelay.inMicroseconds;
+      }
+      if (jitter > 0) {
+        waitMicros = (waitMicros * (1 + rng.nextDouble() * jitter)).round();
+      }
       await Future<void>.delayed(Duration(microseconds: waitMicros));
     }
     // Unreachable: the loop above always returns once it exits.

@@ -61,6 +61,24 @@ extension ResultX<T> on Result<T> {
     if (this case Error<T>(:final failure)) action(failure);
     return this;
   }
+
+  /// Invokes [action] regardless of variant — a finally-style hook for
+  /// cleanup like dismissing a spinner. Returns `this` for chaining.
+  Result<T> onComplete(void Function() action) {
+    action();
+    return this;
+  }
+}
+
+/// Collapses a nested [Result] into a single layer. If the outer is an
+/// [Error], it is returned unchanged; otherwise the inner [Result] is
+/// returned.
+extension FlattenResultX<T> on Result<Result<T>> {
+  /// Removes one layer of nesting from `Result<Result<T>>` to `Result<T>`.
+  Result<T> flatten() => switch (this) {
+        Success<Result<T>>(:final data) => data,
+        Error<Result<T>>(:final failure) => Error<T>(failure),
+      };
 }
 
 /// Async helpers on `Future<Result<T>>`.

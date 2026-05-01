@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:resilify/resilify.dart';
 import 'package:test/test.dart';
 
@@ -83,6 +85,52 @@ void main() {
       stopwatch.stop();
       // attempt 1 fails, wait 20ms, attempt 2 fails, wait 40ms, attempt 3 fails
       expect(stopwatch.elapsedMilliseconds, greaterThanOrEqualTo(50));
+    });
+
+    test('maxDelay caps the wait between attempts', () async {
+      final stopwatch = Stopwatch()..start();
+      await RetryHelper.retry<int>(
+        () async => const Error<int>(Failure.serverError()),
+        maxAttempts: 4,
+        // Without a cap, waits would be 100, 1000, 10_000 ms.
+        delay: const Duration(milliseconds: 100),
+        backoffFactor: 10,
+        maxDelay: const Duration(milliseconds: 30),
+      );
+      stopwatch.stop();
+      // 3 backoff waits, each capped at 30ms => well under 200ms total.
+      expect(stopwatch.elapsedMilliseconds, lessThan(200));
+    });
+
+    test('jitter only ever adds time', () async {
+      // Seeded RNG => deterministic jitter, but we only assert "at least the
+      // base delay was waited" because the jitter multiplier is in [1, 1+j].
+      final stopwatch = Stopwatch()..start();
+      await RetryHelper.retry<int>(
+        () async => const Error<int>(Failure.serverError()),
+        maxAttempts: 2,
+        delay: const Duration(milliseconds: 30),
+        jitter: 1.0,
+        random: Random(42),
+      );
+      stopwatch.stop();
+      expect(stopwatch.elapsedMilliseconds, greaterThanOrEqualTo(30));
+    });
+
+    test('isRetryable composes naturally with retryIf', () async {
+      var calls = 0;
+      final result = await RetryHelper.retry<int>(
+        () async {
+          calls++;
+          return const Error<int>(Failure.notFound());
+        },
+        maxAttempts: 5,
+        delay: const Duration(milliseconds: 1),
+        retryIf: (f) => f.isRetryable,
+      );
+      // 404 is not retryable => first error returned, no extra calls.
+      expect(calls, 1);
+      expect(result.errorOrNull?.code, 404);
     });
   });
 }
