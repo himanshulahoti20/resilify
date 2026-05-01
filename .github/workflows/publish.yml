@@ -1,0 +1,13 @@
+# .github/workflows/publish.yml
+name: Publish to pub.dev
+
+on:
+  push:
+    tags:
+      - "v*" # v1.0.0, v1.2.3, v2.0.0-beta.1, etc.
+
+jobs:
+  publish:
+    permissions:
+      id-token: write # REQUIRED: lets GitHub mint the OIDC token for pub.dev
+    uses: dart-lang/setup-dart/.github/workflows/publish.yml@v1
