@@ -40,6 +40,14 @@ extension ResultX<T> on Result<T> {
         Error<T>(:final failure) => throw ResultUnwrapException(failure),
       };
 
+  /// Returns the wrapped failure on error, or throws a [StateError] on
+  /// success. Symmetric counterpart to [getOrThrow].
+  Failure errorOrThrow() => switch (this) {
+        Success<T>(:final data) =>
+          throw StateError('Called errorOrThrow on a Success: $data'),
+        Error<T>(:final failure) => failure,
+      };
+
   /// Invokes [action] with the data if this is a [Success]. Returns `this`
   /// for chaining.
   Result<T> onSuccess(void Function(T data) action) {

@@ -84,4 +84,68 @@ void main() {
       expect(out, 'ok:1');
     });
   });
+
+  group('Result.tryRun', () {
+    test('wraps return value in Success', () {
+      expect(Result.tryRun<int>(() => 7), const Success<int>(7));
+    });
+
+    test('catches throw and wraps in Error', () {
+      final r = Result.tryRun<int>(() => throw StateError('boom'));
+      expect(r.isError, isTrue);
+      expect(r.errorOrNull!.message, contains('boom'));
+    });
+
+    test('honors onError to translate failure', () {
+      final r = Result.tryRun<int>(
+        () => throw StateError('boom'),
+        onError: (_, __) => const Failure.notFound(),
+      );
+      expect(r, const Error<int>(Failure.notFound()));
+    });
+  });
+
+  group('Result.tryRunAsync', () {
+    test('wraps awaited value in Success', () async {
+      expect(
+        await Result.tryRunAsync<int>(() async => 9),
+        const Success<int>(9),
+      );
+    });
+
+    test('catches async throw and wraps in Error', () async {
+      final r = await Result.tryRunAsync<int>(
+        () async => throw StateError('async boom'),
+      );
+      expect(r.isError, isTrue);
+      expect(r.errorOrNull!.message, contains('async boom'));
+    });
+  });
+
+  group('mapError', () {
+    test('transforms failure on Error', () {
+      const r = Error<int>(Failure.network());
+      final mapped = r.mapError((_) => const Failure.unauthorized());
+      expect(mapped, const Error<int>(Failure.unauthorized()));
+    });
+
+    test('passes through Success unchanged', () {
+      const r = Success<int>(3);
+      expect(r.mapError((_) => const Failure.unauthorized()), r);
+    });
+  });
+
+  group('errorOrThrow', () {
+    test('returns the failure on Error', () {
+      const f = Failure.notFound();
+      expect(const Error<int>(f).errorOrThrow(), f);
+    });
+
+    test('throws StateError on Success', () {
+      expect(
+        () => const Success<int>(1).errorOrThrow(),
+        throwsA(isA<StateError>()),
+      );
+    });
+  });
 }
