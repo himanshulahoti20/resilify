@@ -104,6 +104,29 @@ void main() {
     });
   });
 
+  group('FutureToResultX (asResult)', () {
+    test('non-throwing future becomes Success', () async {
+      final out = await Future<int>.value(42).asResult();
+      expect(out, const Success<int>(42));
+    });
+
+    test('throwing future becomes Error with Failure.unknown by default',
+        () async {
+      final out = await Future<int>.error(StateError('boom')).asResult();
+      expect(out.isError, isTrue);
+      expect(out.errorOrNull?.kind, FailureKind.unknown);
+      expect(out.errorOrNull?.message, contains('boom'));
+    });
+
+    test('onError can translate the thrown object into a domain Failure',
+        () async {
+      final out = await Future<int>.error(StateError('boom')).asResult(
+        onError: (_, __) => const Failure.unauthorized(),
+      );
+      expect(out, const Error<int>(Failure.unauthorized()));
+    });
+  });
+
   group('StreamResultX', () {
     test('dataStream emits only successful payloads', () async {
       final stream = Stream<Result<int>>.fromIterable(const [

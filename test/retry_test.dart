@@ -170,4 +170,38 @@ void main() {
       expect(result.errorOrNull?.code, 408);
     });
   });
+
+  group('RetryHelper.withTimeout', () {
+    test('returns the result when within budget', () async {
+      final out = await RetryHelper.withTimeout<int>(
+        () async => const Success<int>(7),
+        const Duration(seconds: 1),
+      );
+      expect(out, const Success<int>(7));
+    });
+
+    test('returns Failure.timeout when budget is exceeded', () async {
+      final out = await RetryHelper.withTimeout<int>(
+        () async {
+          await Future<void>.delayed(const Duration(milliseconds: 50));
+          return const Success<int>(7);
+        },
+        const Duration(milliseconds: 5),
+      );
+      expect(out.errorOrNull?.kind, FailureKind.timeout);
+      expect(out.errorOrNull?.code, 408);
+    });
+
+    test('honors custom timeoutMessage', () async {
+      final out = await RetryHelper.withTimeout<int>(
+        () async {
+          await Future<void>.delayed(const Duration(milliseconds: 50));
+          return const Success<int>(7);
+        },
+        const Duration(milliseconds: 5),
+        timeoutMessage: 'fetchUser exceeded budget',
+      );
+      expect(out.errorOrNull?.message, 'fetchUser exceeded budget');
+    });
+  });
 }

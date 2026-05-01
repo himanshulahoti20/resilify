@@ -114,9 +114,67 @@ void main() {
       expect(const Failure.conflict().isRetryable, isFalse);
     });
 
-    test('isRetryable is false for code-less failures by default', () {
-      expect(const Failure.network().isRetryable, isFalse);
+    test('isRetryable is true for network and timeout (kind-driven)', () {
+      // 1.1.0: kind-based dispatch makes code-less network/timeout retryable.
+      expect(const Failure.network().isRetryable, isTrue);
+      expect(const Failure.timeout().isRetryable, isTrue);
+    });
+
+    test('isRetryable is false for parsing/cancelled (terminal)', () {
       expect(const Failure.parsing().isRetryable, isFalse);
+      expect(const Failure.cancelled().isRetryable, isFalse);
+    });
+
+    test('isRetryable for unknown falls back to code heuristics', () {
+      expect(
+        const Failure(message: 'mystery 503', code: 503).isRetryable,
+        isTrue,
+      );
+      expect(const Failure(message: 'mystery').isRetryable, isFalse);
+    });
+  });
+
+  group('FailureKind', () {
+    test('named constructors carry the matching kind', () {
+      expect(const Failure.network().kind, FailureKind.network);
+      expect(const Failure.timeout().kind, FailureKind.timeout);
+      expect(
+        const Failure.badResponse(message: 'x').kind,
+        FailureKind.badResponse,
+      );
+      expect(const Failure.parsing().kind, FailureKind.parsing);
+      expect(const Failure.unauthorized().kind, FailureKind.unauthorized);
+      expect(const Failure.forbidden().kind, FailureKind.forbidden);
+      expect(const Failure.notFound().kind, FailureKind.notFound);
+      expect(const Failure.conflict().kind, FailureKind.conflict);
+      expect(const Failure.rateLimit().kind, FailureKind.rateLimit);
+      expect(const Failure.serverError().kind, FailureKind.serverError);
+      expect(const Failure.cancelled().kind, FailureKind.cancelled);
+      expect(const Failure.unknown().kind, FailureKind.unknown);
+    });
+
+    test('generic Failure() defaults kind to unknown', () {
+      expect(const Failure(message: 'x').kind, FailureKind.unknown);
+    });
+
+    test('copyWith carries kind forward and lets it be overridden', () {
+      const original = Failure.network();
+      final copy = original.copyWith(message: 'reworded');
+      expect(copy.kind, FailureKind.network);
+
+      final overridden = original.copyWith(kind: FailureKind.unknown);
+      expect(overridden.kind, FailureKind.unknown);
+    });
+
+    test('toString surfaces the kind for diagnostics', () {
+      expect(const Failure.network().toString(), contains('kind: network'));
+    });
+
+    test('equality still ignores kind (unchanged contract)', () {
+      const a = Failure(message: 'boom', code: 1);
+      const b = Failure(message: 'boom', code: 1, kind: FailureKind.network);
+      // Same message+code+cause => equal even though kind differs.
+      expect(a == b, isTrue);
     });
   });
 

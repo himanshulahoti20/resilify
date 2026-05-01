@@ -5,6 +5,41 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 1.1.0
+
+### Added
+
+- **Circuit breaker** (`CircuitBreaker`) — a closed/open/half-open state
+  machine for `Result`-returning operations. After
+  `failureThreshold` consecutive trip-eligible failures the breaker opens
+  and fast-fails calls for `resetTimeout`, then admits a single probe.
+  Configurable `shouldTrip` predicate (defaults to `failure.isRetryable`)
+  and `onStateChange` observer. Pluggable clock for tests.
+- **`FailureKind` enum + `Failure.kind` field** — categorical tag that
+  discriminates failures independently of `code` / `message`. Enables
+  accurate retry decisions for code-less failures (a `network` failure is
+  retryable; a `parsing` failure is not). New `FailureKind.circuitOpen`
+  marks fast-fail responses from `CircuitBreaker.execute`.
+- **`RetryHelper.withTimeout`** — standalone helper that wraps a single
+  attempt in a timeout, returning `Error(Failure.timeout())` instead of
+  throwing.
+- **`Future<T>.asResult()` extension** — terser bridge from a throwing
+  `Future<T>` into a `Future<Result<T>>` (vs the longer
+  `Result.tryRunAsync(() => future)`). Named `asResult` rather than
+  `toResult` to avoid colliding with the retrofit / chopper integrations'
+  transport-specific `.toResult()` methods.
+
+### Changed
+
+- `Failure.isRetryable` is now decided primarily by `FailureKind`, so
+  `Failure.network()` and similar code-less transient failures are now
+  reported as retryable. Failures built with the unstructured generic
+  constructor still fall back to `code`-based heuristics. Existing
+  `code`-based retry decisions are unchanged.
+- `Failure.toString()` now includes `kind:` for easier diagnostics. The
+  `==` / `hashCode` contract is unchanged (still `code` + `message` +
+  `cause`) so existing equality-based assertions keep working.
+
 ## 1.0.3
 
 ### Added

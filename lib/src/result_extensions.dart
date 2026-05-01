@@ -147,6 +147,31 @@ extension FutureResultX<T> on Future<Result<T>> {
   }
 }
 
+/// Bridges a regular `Future<T>` (which signals failure by throwing) into a
+/// `Future<Result<T>>` without writing `Result.tryRunAsync(() => future)` at
+/// every call site.
+///
+/// Named `asResult` (rather than `toResult`) to avoid colliding with the
+/// transport-specific `.toResult()` methods provided by the retrofit /
+/// chopper integration barrels.
+extension FutureToResultX<T> on Future<T> {
+  /// Awaits this future, returning [Success] on completion or [Error] if it
+  /// throws. By default the caught object is wrapped in [Failure.unknown];
+  /// pass [onError] to translate transport-specific exceptions into a more
+  /// meaningful [Failure].
+  Future<Result<T>> asResult({
+    Failure Function(Object error, StackTrace stackTrace)? onError,
+  }) async {
+    try {
+      return Success<T>(await this);
+    } catch (e, st) {
+      final failure = onError?.call(e, st) ??
+          Failure.unknown(message: e.toString(), stackTrace: st, cause: e);
+      return Error<T>(failure);
+    }
+  }
+}
+
 /// Thrown by [ResultX.getOrThrow] when called on an [Error].
 class ResultUnwrapException implements Exception {
   /// Creates an unwrap exception carrying the originating [failure].
