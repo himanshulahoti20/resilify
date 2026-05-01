@@ -180,8 +180,7 @@ void main() {
     });
 
     test('propagates outer Error', () {
-      const Result<Result<int>> r =
-          Error<Result<int>>(Failure.unauthorized());
+      const Result<Result<int>> r = Error<Result<int>>(Failure.unauthorized());
       expect(r.flatten(), const Error<int>(Failure.unauthorized()));
     });
   });
