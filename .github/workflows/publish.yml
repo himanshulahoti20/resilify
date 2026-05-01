@@ -1,59 +1,24 @@
 # .github/workflows/publish.yml
-# Publishes resilify to pub.dev when pubspec.yaml version changes on main.
+# Publishes resilify to pub.dev when a version tag (v*) is pushed.
+# Uses OIDC — no secrets needed.
 
 name: Publish to pub.dev
 
 on:
   push:
-    branches: [main]
-    paths:
-      - "pubspec.yaml" # only run when this file changes
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+*" # v1.0.2, v2.0.0, v1.0.0-beta.1
 
 jobs:
-  check-version:
-    name: Check if version changed
-    runs-on: ubuntu-latest
-    outputs:
-      should_publish: ${{ steps.check.outputs.should_publish }}
-      version: ${{ steps.check.outputs.version }}
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 2 # need previous commit to diff
-
-      - name: Compare versions
-        id: check
-        run: |
-          NEW_VERSION=$(grep '^version:' pubspec.yaml | sed 's/version: *//' | tr -d ' ')
-          OLD_VERSION=$(git show HEAD~1:pubspec.yaml 2>/dev/null | grep '^version:' | sed 's/version: *//' | tr -d ' ' || echo "")
-          echo "Old: $OLD_VERSION  →  New: $NEW_VERSION"
-          if [ "$NEW_VERSION" != "$OLD_VERSION" ] && [ -n "$NEW_VERSION" ]; then
-            echo "should_publish=true" >> $GITHUB_OUTPUT
-            echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
-          else
-            echo "should_publish=false" >> $GITHUB_OUTPUT
-          fi
-
-  tag-and-publish:
-    name: Tag and publish
-    needs: check-version
-    if: needs.check-version.outputs.should_publish == 'true'
+  publish:
+    name: Publish
     runs-on: ubuntu-latest
     permissions:
-      id-token: write # for OIDC to pub.dev
-      contents: write # to push the tag
+      id-token: write # required for OIDC auth to pub.dev
 
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Create and push tag
-        env:
-          VERSION: ${{ needs.check-version.outputs.version }}
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag -a "v$VERSION" -m "Release v$VERSION"
-          git push origin "v$VERSION"
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Setup Dart
         uses: dart-lang/setup-dart@v1
@@ -61,5 +26,20 @@ jobs:
       - name: Install dependencies
         run: dart pub get
 
-      - name: Publish (OIDC, no token needed)
+      # Safety: tag must match pubspec version exactly
+      - name: Verify tag matches pubspec version
+        run: |
+          TAG="${GITHUB_REF#refs/tags/v}"
+          PUBSPEC=$(grep '^version:' pubspec.yaml | sed 's/version: *//' | tr -d ' ')
+          echo "Tag:     $TAG"
+          echo "Pubspec: $PUBSPEC"
+          if [ "$TAG" != "$PUBSPEC" ]; then
+            echo "::error::Tag v$TAG does not match pubspec.yaml version $PUBSPEC"
+            exit 1
+          fi
+
+      - name: Dry run (catch issues before upload)
+        run: dart pub publish --dry-run
+
+      - name: Publish
         run: dart pub publish --force
