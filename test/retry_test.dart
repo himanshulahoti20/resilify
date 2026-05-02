@@ -132,5 +132,42 @@ void main() {
       expect(calls, 1);
       expect(result.errorOrNull?.code, 404);
     });
+
+    test('attemptTimeout converts a slow attempt into Failure.timeout',
+        () async {
+      var calls = 0;
+      final result = await RetryHelper.retry<int>(
+        () async {
+          calls++;
+          // First attempt hangs longer than the per-attempt timeout.
+          if (calls == 1) {
+            await Future<void>.delayed(const Duration(milliseconds: 200));
+            return const Success<int>(1);
+          }
+          return const Success<int>(2);
+        },
+        maxAttempts: 2,
+        delay: const Duration(milliseconds: 1),
+        attemptTimeout: const Duration(milliseconds: 20),
+      );
+      // First attempt times out, second succeeds.
+      expect(result, const Success<int>(2));
+      expect(calls, 2);
+    });
+
+    test('attemptTimeout returns Failure.timeout when all attempts time out',
+        () async {
+      final result = await RetryHelper.retry<int>(
+        () async {
+          await Future<void>.delayed(const Duration(milliseconds: 100));
+          return const Success<int>(1);
+        },
+        maxAttempts: 2,
+        delay: const Duration(milliseconds: 1),
+        attemptTimeout: const Duration(milliseconds: 10),
+      );
+      expect(result.isError, isTrue);
+      expect(result.errorOrNull?.code, 408);
+    });
   });
 }

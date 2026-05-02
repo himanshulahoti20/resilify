@@ -76,6 +76,32 @@ void main() {
           .recover((_) async => -1);
       expect(out, const Success<int>(7));
     });
+
+    test('recoverWith can return another Result that itself fails', () async {
+      final out = await Future<Result<int>>.value(
+        const Error<int>(Failure.serverError()),
+      ).recoverWith((_) async => const Error<int>(Failure.notFound()));
+      expect(out.errorOrNull?.code, 404);
+    });
+
+    test('recoverWith leaves Success untouched', () async {
+      final out = await Future<Result<int>>.value(const Success<int>(5))
+          .recoverWith((_) async => const Error<int>(Failure.notFound()));
+      expect(out, const Success<int>(5));
+    });
+
+    test('mapErrorAsync transforms failure asynchronously', () async {
+      final out = await Future<Result<int>>.value(
+        const Error<int>(Failure.network()),
+      ).mapErrorAsync((f) async => const Failure.unauthorized());
+      expect(out, const Error<int>(Failure.unauthorized()));
+    });
+
+    test('mapErrorAsync leaves Success untouched', () async {
+      final out = await Future<Result<int>>.value(const Success<int>(2))
+          .mapErrorAsync((f) async => const Failure.unauthorized());
+      expect(out, const Success<int>(2));
+    });
   });
 
   group('StreamResultX', () {
