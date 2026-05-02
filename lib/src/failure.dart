@@ -16,6 +16,7 @@ class Failure {
     this.code,
     this.stackTrace,
     this.cause,
+    this.retryAfter,
   });
 
   /// A connectivity problem (DNS lookup failure, no internet, socket reset).
@@ -24,6 +25,7 @@ class Failure {
     this.code,
     this.stackTrace,
     this.cause,
+    this.retryAfter,
   });
 
   /// The operation did not complete within the configured timeout.
@@ -32,6 +34,7 @@ class Failure {
     this.code = 408,
     this.stackTrace,
     this.cause,
+    this.retryAfter,
   });
 
   /// The server returned a response that could not be interpreted as expected
@@ -41,6 +44,7 @@ class Failure {
     this.code,
     this.stackTrace,
     this.cause,
+    this.retryAfter,
   });
 
   /// Decoding the response body into the target type failed.
@@ -49,7 +53,7 @@ class Failure {
     this.code,
     this.stackTrace,
     this.cause,
-  });
+  }) : retryAfter = null;
 
   /// HTTP 401 — the request lacks valid authentication credentials.
   const Failure.unauthorized({
@@ -57,7 +61,7 @@ class Failure {
     this.code = 401,
     this.stackTrace,
     this.cause,
-  });
+  }) : retryAfter = null;
 
   /// HTTP 403 — the server understood the request but refuses to authorize it.
   const Failure.forbidden({
@@ -65,7 +69,7 @@ class Failure {
     this.code = 403,
     this.stackTrace,
     this.cause,
-  });
+  }) : retryAfter = null;
 
   /// HTTP 404 — the target resource does not exist.
   const Failure.notFound({
@@ -73,7 +77,7 @@ class Failure {
     this.code = 404,
     this.stackTrace,
     this.cause,
-  });
+  }) : retryAfter = null;
 
   /// HTTP 409 — the request conflicts with the current state of the resource.
   const Failure.conflict({
@@ -81,14 +85,19 @@ class Failure {
     this.code = 409,
     this.stackTrace,
     this.cause,
-  });
+  }) : retryAfter = null;
 
   /// HTTP 429 — too many requests; the client should back off.
+  ///
+  /// When the server sends a `Retry-After` header, parse it via
+  /// [Failure.parseRetryAfter] and pass the resulting [Duration] as
+  /// [retryAfter] so callers can sleep exactly that long before retrying.
   const Failure.rateLimit({
     this.message = 'Rate limit exceeded',
     this.code = 429,
     this.stackTrace,
     this.cause,
+    this.retryAfter,
   });
 
   /// Any 5xx response from the server.
@@ -97,6 +106,7 @@ class Failure {
     this.code = 500,
     this.stackTrace,
     this.cause,
+    this.retryAfter,
   });
 
   /// The request was cancelled before it could complete.
@@ -105,7 +115,7 @@ class Failure {
     this.code,
     this.stackTrace,
     this.cause,
-  });
+  }) : retryAfter = null;
 
   /// Catch-all for failures that do not fit any other category.
   const Failure.unknown({
@@ -113,7 +123,7 @@ class Failure {
     this.code,
     this.stackTrace,
     this.cause,
-  });
+  }) : retryAfter = null;
 
   /// Maps an HTTP status [code] onto the most specific named [Failure]
   /// constructor available, falling back to [Failure.badResponse] for any
@@ -216,18 +226,55 @@ class Failure {
   /// The underlying error/exception that triggered this failure, if any.
   final Object? cause;
 
+  /// Server-supplied hint for how long to wait before retrying, typically
+  /// extracted from an HTTP `Retry-After` header on a 429 or 503 response.
+  ///
+  /// Use [Failure.parseRetryAfter] to convert a raw header value into a
+  /// [Duration]. Pair with `RetryHelper.retry`'s `retryIf` to honor the
+  /// server's back-off hint:
+  ///
+  /// ```dart
+  /// await RetryHelper.retry(
+  ///   () => api.get(...),
+  ///   retryIf: (f) => f.isRetryable,
+  ///   delay: failure.retryAfter ?? const Duration(milliseconds: 500),
+  /// );
+  /// ```
+  final Duration? retryAfter;
+
+  /// Parses an HTTP `Retry-After` header value into a [Duration].
+  ///
+  /// Supports the **seconds form** of RFC 7231 §7.1.3 (e.g. `"120"`). Negative
+  /// values clamp to [Duration.zero]. Returns `null` if [header] is `null`,
+  /// blank, or non-numeric.
+  ///
+  /// The HTTP-date form (`"Wed, 21 Oct 2026 07:28:00 GMT"`) is intentionally
+  /// not parsed here so the core library stays free of `dart:io`. Callers that
+  /// need it can decode the date themselves and pass the resulting [Duration]
+  /// to the [retryAfter] field directly.
+  static Duration? parseRetryAfter(String? header) {
+    if (header == null) return null;
+    final trimmed = header.trim();
+    if (trimmed.isEmpty) return null;
+    final seconds = int.tryParse(trimmed);
+    if (seconds == null) return null;
+    return Duration(seconds: seconds < 0 ? 0 : seconds);
+  }
+
   /// Returns a copy of this failure with the supplied fields overridden.
   Failure copyWith({
     int? code,
     String? message,
     StackTrace? stackTrace,
     Object? cause,
+    Duration? retryAfter,
   }) {
     return Failure(
       code: code ?? this.code,
       message: message ?? this.message,
       stackTrace: stackTrace ?? this.stackTrace,
       cause: cause ?? this.cause,
+      retryAfter: retryAfter ?? this.retryAfter,
     );
   }
 
@@ -237,17 +284,19 @@ class Failure {
     return other is Failure &&
         other.code == code &&
         other.message == message &&
-        other.cause == cause;
+        other.cause == cause &&
+        other.retryAfter == retryAfter;
   }
 
   @override
-  int get hashCode => Object.hash(code, message, cause);
+  int get hashCode => Object.hash(code, message, cause, retryAfter);
 
   @override
   String toString() {
     final buffer = StringBuffer('Failure(');
     if (code != null) buffer.write('code: $code, ');
     buffer.write('message: $message');
+    if (retryAfter != null) buffer.write(', retryAfter: $retryAfter');
     if (cause != null) buffer.write(', cause: $cause');
     buffer.write(')');
     return buffer.toString();

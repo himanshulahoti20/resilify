@@ -93,7 +93,8 @@ class ResultLoggerInterceptor extends Interceptor {
     if (logError) {
       final box = _Box('ERROR')
         ..line(
-            '${err.type} ${err.requestOptions.method} ${err.requestOptions.uri}')
+          '${err.type} ${err.requestOptions.method} ${err.requestOptions.uri}',
+        )
         ..line('Message: ${err.message ?? '<none>'}');
       final response = err.response;
       if (response != null) {
