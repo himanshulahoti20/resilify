@@ -5,6 +5,40 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 1.0.5
+
+### Added
+
+- **`Result.tap()`** — execute side effects (logging, debugging) on successful
+  results without transforming the value. Great for inspecting data in the
+  middle of a result chain:
+
+  ```dart
+  result.tap(print).tap(logToAnalytics).map(transformData);
+  ```
+- Enhanced code quality standards with stricter linting rules (upgraded `lints`
+  to ^6.1.0) — the package now adheres to the latest Dart conventions and best
+  practices for code style and correctness.
+
+### Fixed
+
+- Trailing-comma lint warnings in `lib/src/integrations/chopper_result.dart`
+  and `lib/src/result.dart` — package now passes `dart analyze --fatal-warnings`
+  with zero issues.
+- Removed deprecated transitive dependencies (`build_resolvers`,
+  `build_runner_core`) that were flagged by pub.dev.
+
+### Changed
+
+- Updated dev dependencies to latest versions:
+  - `lints`: ^4.0.0 → ^6.1.0 for stricter code quality checks
+  - `retrofit_generator`: ^8.0.0 → ^10.2.5
+  - `build_runner`: ^2.4.0 → ^2.15.0
+  - `chopper_generator`: ^8.0.0 → ^8.6.1
+  - `json_serializable`: ^6.7.0 → ^6.13.2
+  - `test`: ^1.25.0 → ^1.31.1
+  - All transitive dependencies updated to latest compatible versions.
+
 ## 1.0.4
 
 ### Added

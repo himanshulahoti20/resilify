@@ -69,6 +69,13 @@ extension ResultX<T> on Result<T> {
     action();
     return this;
   }
+
+  /// Invokes [action] with the data on success, passing through the result
+  /// unchanged. Useful for side effects like logging without transforming.
+  Result<T> tap(void Function(T data) action) {
+    if (this case Success<T>(:final data)) action(data);
+    return this;
+  }
 }
 
 /// Collapses a nested [Result] into a single layer. If the outer is an

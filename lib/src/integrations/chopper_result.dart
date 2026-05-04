@@ -30,7 +30,8 @@ import '../result.dart';
 /// Default implementation classifies by status code; supply a custom mapper to
 /// extract a typed error envelope from `response.error`.
 typedef ChopperFailureMapper<BodyType> = Failure Function(
-    Response<BodyType> response);
+  Response<BodyType> response,
+);
 
 /// Default [ChopperFailureMapper] used when none is provided to [.toResult].
 Failure defaultChopperFailureMapper<BodyType>(Response<BodyType> response) {
