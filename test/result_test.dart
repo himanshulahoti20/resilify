@@ -50,10 +50,7 @@ void main() {
     test('Success equality is by data', () {
       expect(const Success<int>(1) == const Success<int>(1), isTrue);
       expect(const Success<int>(1) == const Success<int>(2), isFalse);
-      expect(
-        const Success<int>(1).hashCode,
-        const Success<int>(1).hashCode,
-      );
+      expect(const Success<int>(1).hashCode, const Success<int>(1).hashCode);
     });
 
     test('Error equality is by failure', () {
@@ -174,8 +171,9 @@ void main() {
     });
 
     test('preserves inner Error when outer is Success', () {
-      const Result<Result<int>> r =
-          Success<Result<int>>(Error<int>(Failure.notFound()));
+      const Result<Result<int>> r = Success<Result<int>>(
+        Error<int>(Failure.notFound()),
+      );
       expect(r.flatten(), const Error<int>(Failure.notFound()));
     });
 

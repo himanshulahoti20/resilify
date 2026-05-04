@@ -225,18 +225,18 @@ class HttpResultHandler {
     return switch (code) {
       401 => Failure.unauthorized(cause: response.body),
       404 => Failure.notFound(cause: response.body),
-      429 => Failure.rateLimit(
-          cause: response.body,
-          retryAfter: retryAfter,
-        ),
+      429 => Failure.rateLimit(cause: response.body, retryAfter: retryAfter),
       >= 500 && < 600 => Failure.serverError(
           code: code,
           message: message,
           cause: response.body,
           retryAfter: retryAfter,
         ),
-      _ =>
-        Failure.badResponse(code: code, message: message, cause: response.body),
+      _ => Failure.badResponse(
+          code: code,
+          message: message,
+          cause: response.body,
+        ),
     };
   }
 }

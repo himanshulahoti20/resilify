@@ -60,9 +60,7 @@ void main() {
     });
 
     test('404 maps to Failure.notFound', () async {
-      final client = MockClient(
-        (_) async => http.Response('not found', 404),
-      );
+      final client = MockClient((_) async => http.Response('not found', 404));
       final api = HttpResultHandler(client: client);
 
       final result = await api.get<Object?>(
@@ -76,9 +74,7 @@ void main() {
     });
 
     test('5xx maps to Failure.serverError with status code', () async {
-      final client = MockClient(
-        (_) async => http.Response('boom', 503),
-      );
+      final client = MockClient((_) async => http.Response('boom', 503));
       final api = HttpResultHandler(client: client);
 
       final result = await api.get<Object?>(
@@ -91,9 +87,7 @@ void main() {
     });
 
     test('invalid JSON in 200 response yields Failure.parsing', () async {
-      final client = MockClient(
-        (_) async => http.Response('not-json', 200),
-      );
+      final client = MockClient((_) async => http.Response('not-json', 200));
       final api = HttpResultHandler(client: client);
 
       final result = await api.get<Object?>(

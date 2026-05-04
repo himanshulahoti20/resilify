@@ -25,8 +25,5 @@ Future<void> main() async {
         print('retry $attempt because: ${failure.message}'),
   );
 
-  result.when(
-    success: print,
-    error: (f) => print('gave up: ${f.message}'),
-  );
+  result.when(success: print, error: (f) => print('gave up: ${f.message}'));
 }

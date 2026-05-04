@@ -213,24 +213,29 @@ class DioResultHandler {
 Failure mapDioException(DioException e, [StackTrace? stackTrace]) {
   final st = stackTrace ?? e.stackTrace;
   final status = e.response?.statusCode;
-  final retryAfterHeader =
-      e.response?.headers.value('retry-after') ??
-          e.response?.headers.value('Retry-After');
+  final retryAfterHeader = e.response?.headers.value('retry-after') ??
+      e.response?.headers.value('Retry-After');
   final retryAfter = Failure.parseRetryAfter(retryAfterHeader);
 
   return switch (e.type) {
     DioExceptionType.connectionTimeout ||
     DioExceptionType.sendTimeout ||
     DioExceptionType.receiveTimeout =>
-      Failure.timeout(cause: e, stackTrace: st),
+      Failure.timeout(
+        cause: e,
+        stackTrace: st,
+      ),
     DioExceptionType.cancel => Failure.cancelled(cause: e, stackTrace: st),
     DioExceptionType.connectionError => Failure.network(
         message: e.message ?? 'Connection error',
         cause: e,
         stackTrace: st,
       ),
-    DioExceptionType.badCertificate =>
-      Failure.network(message: 'Bad certificate', cause: e, stackTrace: st),
+    DioExceptionType.badCertificate => Failure.network(
+        message: 'Bad certificate',
+        cause: e,
+        stackTrace: st,
+      ),
     DioExceptionType.badResponse => switch (status) {
         401 => Failure.unauthorized(cause: e, stackTrace: st),
         404 => Failure.notFound(cause: e, stackTrace: st),

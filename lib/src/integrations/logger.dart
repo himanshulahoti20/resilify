@@ -52,10 +52,7 @@ class ResultLoggerInterceptor extends Interceptor {
   }
 
   @override
-  void onRequest(
-    RequestOptions options,
-    RequestInterceptorHandler handler,
-  ) {
+  void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
     if (logRequest) {
       final box = _Box('REQUEST')..line('${options.method} ${options.uri}');
       if (logHeaders) box.section('Headers', options.headers);

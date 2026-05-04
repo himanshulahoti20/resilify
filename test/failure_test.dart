@@ -175,15 +175,14 @@ void main() {
       expect(Failure.parseRetryAfter('Wed, 21 Oct 2026 07:28:00 GMT'), isNull);
     });
 
-    test('rateLimit constructor carries retryAfter into equality and toString',
-        () {
-      const f = Failure.rateLimit(retryAfter: Duration(seconds: 30));
-      expect(f.retryAfter, const Duration(seconds: 30));
-      expect(
-        f,
-        const Failure.rateLimit(retryAfter: Duration(seconds: 30)),
-      );
-      expect(f.toString(), contains('retryAfter'));
-    });
+    test(
+      'rateLimit constructor carries retryAfter into equality and toString',
+      () {
+        const f = Failure.rateLimit(retryAfter: Duration(seconds: 30));
+        expect(f.retryAfter, const Duration(seconds: 30));
+        expect(f, const Failure.rateLimit(retryAfter: Duration(seconds: 30)));
+        expect(f.toString(), contains('retryAfter'));
+      },
+    );
   });
 }
