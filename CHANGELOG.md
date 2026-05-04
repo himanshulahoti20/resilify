@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 1.0.6
+
+### Fixed
+
+* Resolved pub.dev analysis failure caused by `dart pub outdated --json` crashing during dependency advisory parsing.
+* Stabilized dependency resolution to ensure compatibility with pub.dev's pana analysis pipeline.
+* Fixed documentation generation issues that prevented dartdoc from running successfully.
+* Corrected `documentation` URL in `pubspec.yaml` to point to a valid and accessible resource.
+
+### Changed
+
+* Adjusted dependency constraints (notably `dio`) to avoid triggering advisory parsing issues on pub.dev.
+* Simplified dev dependency graph to improve analysis reliability and prevent toolchain conflicts.
+* Improved overall package compatibility with pub.dev scoring system and analysis environment.
+
+### Documentation
+
+* Added missing dartdoc comments across public APIs to improve documentation coverage and pub score.
+
+
 ## 1.0.5
 
 ### Added
