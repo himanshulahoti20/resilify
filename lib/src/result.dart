@@ -91,11 +91,13 @@ sealed class Result<T> {
     if (a is Error<A>) return Error<(A, B, C)>(a.failure);
     if (b is Error<B>) return Error<(A, B, C)>(b.failure);
     if (c is Error<C>) return Error<(A, B, C)>(c.failure);
-    return Success<(A, B, C)>((
-      (a as Success<A>).data,
-      (b as Success<B>).data,
-      (c as Success<C>).data,
-    ));
+    return Success<(A, B, C)>(
+      (
+        (a as Success<A>).data,
+        (b as Success<B>).data,
+        (c as Success<C>).data,
+      ),
+    );
   }
 
   /// Collapses an iterable of [Result]s into a single `Result<List<T>>`.
