@@ -43,8 +43,9 @@ extension ResultX<T> on Result<T> {
   /// Returns the wrapped failure on error, or throws a [StateError] on
   /// success. Symmetric counterpart to [getOrThrow].
   Failure errorOrThrow() => switch (this) {
-        Success<T>(:final data) =>
-          throw StateError('Called errorOrThrow on a Success: $data'),
+        Success<T>(:final data) => throw StateError(
+            'Called errorOrThrow on a Success: $data',
+          ),
         Error<T>(:final failure) => failure,
       };
 
@@ -87,9 +88,7 @@ extension FlattenResultX<T> on Result<Result<T>> {
 /// `then`s and conditional branches.
 extension FutureResultX<T> on Future<Result<T>> {
   /// Awaits this future, then applies [transform] to the data on success.
-  Future<Result<R>> mapAsync<R>(
-    Future<R> Function(T data) transform,
-  ) async {
+  Future<Result<R>> mapAsync<R>(Future<R> Function(T data) transform) async {
     final result = await this;
     return switch (result) {
       Success<T>(:final data) => Success<R>(await transform(data)),

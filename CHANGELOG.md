@@ -5,6 +5,38 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 1.0.4
+
+### Added
+
+- **`Failure.retryAfter`** — a `Duration?` field on `Failure` that surfaces
+  the server's back-off hint from a `Retry-After` HTTP header. Populated
+  automatically for 429 / 5xx responses by both `HttpResultHandler` and the
+  Dio integration's `mapDioException`. Pair with `RetryHelper.retry`'s
+  `delay` parameter to honor the server's wait time exactly:
+
+  ```dart
+  result.errorOrNull?.retryAfter // Duration(seconds: 30) when present
+  ```
+
+- **`Failure.parseRetryAfter(String?)`** — static helper that converts the
+  seconds form of an HTTP `Retry-After` header into a `Duration`. Returns
+  `null` for null / blank / non-numeric input; clamps negatives to zero. The
+  HTTP-date form is intentionally left to callers so the core library stays
+  free of `dart:io`.
+- `platforms:` declaration in `pubspec.yaml` (Android, iOS, Linux, macOS,
+  Windows) so pub.dev surfaces verified platform support on the package page.
+- `documentation:` link in `pubspec.yaml` pointing at the published dartdoc.
+- Smoke tests for `HttpResultHandler` covering JSON GET/POST round-trips,
+  query parameter merging, default-header propagation, 404 / 429 / 5xx
+  mapping, `Retry-After` extraction, and parsing failures — closing the
+  integration test gap flagged in the 1.0.3 audit.
+
+### Fixed
+
+- Trailing-comma lint warnings in `dio_result.dart` and `logger.dart` so the
+  package now ships with a clean `dart analyze`.
+
 ## 1.0.3
 
 ### Added

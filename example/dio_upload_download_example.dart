@@ -7,9 +7,7 @@ import 'dart:io';
 import 'package:resilify/resilify_dio.dart';
 
 Future<void> main() async {
-  final dio = Dio(
-    BaseOptions(baseUrl: 'https://example.com'),
-  );
+  final dio = Dio(BaseOptions(baseUrl: 'https://example.com'));
   final api = DioResultHandler(dio);
 
   await _upload(api);

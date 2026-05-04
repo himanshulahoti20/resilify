@@ -30,8 +30,7 @@ import '../result.dart';
 /// Default implementation classifies by status code; supply a custom mapper to
 /// extract a typed error envelope from `response.error`.
 typedef ChopperFailureMapper<BodyType> = Failure Function(
-  Response<BodyType> response,
-);
+    Response<BodyType> response);
 
 /// Default [ChopperFailureMapper] used when none is provided to [.toResult].
 Failure defaultChopperFailureMapper<BodyType>(Response<BodyType> response) {
@@ -41,11 +40,7 @@ Failure defaultChopperFailureMapper<BodyType>(Response<BodyType> response) {
     401 => Failure.unauthorized(cause: body),
     404 => Failure.notFound(cause: body),
     >= 500 && < 600 => Failure.serverError(code: code, cause: body),
-    _ => Failure.badResponse(
-        code: code,
-        message: 'HTTP $code',
-        cause: body,
-      ),
+    _ => Failure.badResponse(code: code, message: 'HTTP $code', cause: body),
   };
 }
 

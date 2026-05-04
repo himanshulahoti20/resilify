@@ -52,10 +52,7 @@ class ResultLoggerInterceptor extends Interceptor {
   }
 
   @override
-  void onRequest(
-    RequestOptions options,
-    RequestInterceptorHandler handler,
-  ) {
+  void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
     if (logRequest) {
       final box = _Box('REQUEST')..line('${options.method} ${options.uri}');
       if (logHeaders) box.section('Headers', options.headers);
@@ -93,7 +90,8 @@ class ResultLoggerInterceptor extends Interceptor {
     if (logError) {
       final box = _Box('ERROR')
         ..line(
-            '${err.type} ${err.requestOptions.method} ${err.requestOptions.uri}')
+          '${err.type} ${err.requestOptions.method} ${err.requestOptions.uri}',
+        )
         ..line('Message: ${err.message ?? '<none>'}');
       final response = err.response;
       if (response != null) {

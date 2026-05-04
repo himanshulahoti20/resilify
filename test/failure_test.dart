@@ -158,4 +158,31 @@ void main() {
       expect(f.toString(), isNot(contains('code:')));
     });
   });
+
+  group('Failure.parseRetryAfter', () {
+    test('parses seconds form', () {
+      expect(Failure.parseRetryAfter('120'), const Duration(seconds: 120));
+    });
+
+    test('clamps negative values to zero', () {
+      expect(Failure.parseRetryAfter('-5'), Duration.zero);
+    });
+
+    test('returns null for null, blank, or non-numeric input', () {
+      expect(Failure.parseRetryAfter(null), isNull);
+      expect(Failure.parseRetryAfter(''), isNull);
+      expect(Failure.parseRetryAfter('   '), isNull);
+      expect(Failure.parseRetryAfter('Wed, 21 Oct 2026 07:28:00 GMT'), isNull);
+    });
+
+    test(
+      'rateLimit constructor carries retryAfter into equality and toString',
+      () {
+        const f = Failure.rateLimit(retryAfter: Duration(seconds: 30));
+        expect(f.retryAfter, const Duration(seconds: 30));
+        expect(f, const Failure.rateLimit(retryAfter: Duration(seconds: 30)));
+        expect(f.toString(), contains('retryAfter'));
+      },
+    );
+  });
 }

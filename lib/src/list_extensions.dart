@@ -30,9 +30,7 @@ extension ResultListX<T> on Result<List<T>> {
   /// Returns the first element of the wrapped list as a `Result<T>`. If the
   /// list is empty, the result becomes an [Error] carrying [Failure.notFound]
   /// with [emptyMessage].
-  Result<T> firstOrError({
-    String emptyMessage = 'List is empty',
-  }) {
+  Result<T> firstOrError({String emptyMessage = 'List is empty'}) {
     return switch (this) {
       Success<List<T>>(:final data) => data.isEmpty
           ? Error<T>(Failure.notFound(message: emptyMessage))

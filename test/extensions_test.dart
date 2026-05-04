@@ -14,10 +14,7 @@ void main() {
       expect(const Success<int>(1).dataOrNull, 1);
       expect(const Success<int>(1).errorOrNull, isNull);
       expect(const Error<int>(Failure.notFound()).dataOrNull, isNull);
-      expect(
-        const Error<int>(Failure.notFound()).errorOrNull,
-        isNotNull,
-      );
+      expect(const Error<int>(Failure.notFound()).errorOrNull, isNotNull);
     });
 
     test('getOrElse', () {
@@ -46,8 +43,9 @@ void main() {
 
   group('FutureResultX', () {
     test('mapAsync transforms Success', () async {
-      final out = await Future<Result<int>>.value(const Success<int>(2))
-          .mapAsync<int>((v) async => v * 10);
+      final out = await Future<Result<int>>.value(
+        const Success<int>(2),
+      ).mapAsync<int>((v) async => v * 10);
       expect(out, const Success<int>(20));
     });
 
@@ -59,8 +57,9 @@ void main() {
     });
 
     test('flatMapAsync chains', () async {
-      final out = await Future<Result<int>>.value(const Success<int>(2))
-          .flatMapAsync<String>((v) async => Success<String>('v$v'));
+      final out = await Future<Result<int>>.value(
+        const Success<int>(2),
+      ).flatMapAsync<String>((v) async => Success<String>('v$v'));
       expect(out, const Success<String>('v2'));
     });
 
@@ -72,8 +71,9 @@ void main() {
     });
 
     test('recover leaves Success untouched', () async {
-      final out = await Future<Result<int>>.value(const Success<int>(7))
-          .recover((_) async => -1);
+      final out = await Future<Result<int>>.value(
+        const Success<int>(7),
+      ).recover((_) async => -1);
       expect(out, const Success<int>(7));
     });
 
@@ -85,8 +85,9 @@ void main() {
     });
 
     test('recoverWith leaves Success untouched', () async {
-      final out = await Future<Result<int>>.value(const Success<int>(5))
-          .recoverWith((_) async => const Error<int>(Failure.notFound()));
+      final out = await Future<Result<int>>.value(
+        const Success<int>(5),
+      ).recoverWith((_) async => const Error<int>(Failure.notFound()));
       expect(out, const Success<int>(5));
     });
 
@@ -98,8 +99,9 @@ void main() {
     });
 
     test('mapErrorAsync leaves Success untouched', () async {
-      final out = await Future<Result<int>>.value(const Success<int>(2))
-          .mapErrorAsync((f) async => const Failure.unauthorized());
+      final out = await Future<Result<int>>.value(
+        const Success<int>(2),
+      ).mapErrorAsync((f) async => const Failure.unauthorized());
       expect(out, const Success<int>(2));
     });
   });

@@ -213,22 +213,43 @@ class DioResultHandler {
 Failure mapDioException(DioException e, [StackTrace? stackTrace]) {
   final st = stackTrace ?? e.stackTrace;
   final status = e.response?.statusCode;
+  final retryAfterHeader = e.response?.headers.value('retry-after') ??
+      e.response?.headers.value('Retry-After');
+  final retryAfter = Failure.parseRetryAfter(retryAfterHeader);
 
   return switch (e.type) {
     DioExceptionType.connectionTimeout ||
     DioExceptionType.sendTimeout ||
     DioExceptionType.receiveTimeout =>
-      Failure.timeout(cause: e, stackTrace: st),
+      Failure.timeout(
+        cause: e,
+        stackTrace: st,
+      ),
     DioExceptionType.cancel => Failure.cancelled(cause: e, stackTrace: st),
     DioExceptionType.connectionError => Failure.network(
-        message: e.message ?? 'Connection error', cause: e, stackTrace: st),
-    DioExceptionType.badCertificate =>
-      Failure.network(message: 'Bad certificate', cause: e, stackTrace: st),
+        message: e.message ?? 'Connection error',
+        cause: e,
+        stackTrace: st,
+      ),
+    DioExceptionType.badCertificate => Failure.network(
+        message: 'Bad certificate',
+        cause: e,
+        stackTrace: st,
+      ),
     DioExceptionType.badResponse => switch (status) {
         401 => Failure.unauthorized(cause: e, stackTrace: st),
         404 => Failure.notFound(cause: e, stackTrace: st),
-        final s when s != null && s >= 500 && s < 600 =>
-          Failure.serverError(code: s, cause: e, stackTrace: st),
+        429 => Failure.rateLimit(
+            cause: e,
+            stackTrace: st,
+            retryAfter: retryAfter,
+          ),
+        final s when s != null && s >= 500 && s < 600 => Failure.serverError(
+            code: s,
+            cause: e,
+            stackTrace: st,
+            retryAfter: retryAfter,
+          ),
         _ => Failure.badResponse(
             code: status,
             message: e.message ?? 'Bad response',
@@ -237,6 +258,9 @@ Failure mapDioException(DioException e, [StackTrace? stackTrace]) {
           ),
       },
     DioExceptionType.unknown => Failure.unknown(
-        message: e.message ?? 'Unknown error', cause: e, stackTrace: st),
+        message: e.message ?? 'Unknown error',
+        cause: e,
+        stackTrace: st,
+      ),
   };
 }

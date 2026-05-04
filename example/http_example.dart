@@ -7,10 +7,8 @@ import 'package:resilify/resilify_http.dart';
 class Post {
   Post({required this.id, required this.title});
 
-  factory Post.fromJson(Map<String, dynamic> json) => Post(
-        id: json['id'] as int,
-        title: json['title'] as String,
-      );
+  factory Post.fromJson(Map<String, dynamic> json) =>
+      Post(id: json['id'] as int, title: json['title'] as String);
 
   final int id;
   final String title;
