@@ -5,8 +5,9 @@ import 'dart:convert';
 
 import 'package:dio/dio.dart';
 
-/// Sink for log lines. Defaults to `print`; swap for `logger`, Sentry, etc.
-typedef LogCallback = void Function(String line);
+import '../log_callback.dart';
+
+export '../log_callback.dart';
 
 /// A Dio [Interceptor] that emits structured, human-readable log output for
 /// requests, responses, and errors.

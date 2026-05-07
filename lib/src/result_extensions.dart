@@ -70,6 +70,33 @@ extension ResultX<T> on Result<T> {
   }
 }
 
+/// Async transformations applied directly to a [Result] (not a future).
+///
+/// Unlike [FutureResultX] which operates on `Future<Result<T>>`, these methods
+/// start from a plain [Result<T>] and return a `Future<Result<R>>`, making
+/// them useful at the start of an async pipeline or when you already hold a
+/// resolved result.
+extension ResultAsyncX<T> on Result<T> {
+  /// If this is a [Success], awaits [transform] applied to the data and wraps
+  /// the return value in a new [Success]. Otherwise resolves immediately with
+  /// the existing [Error].
+  Future<Result<R>> asyncMap<R>(Future<R> Function(T data) transform) =>
+      switch (this) {
+        Success<T>(:final data) => transform(data).then(Success<R>.new),
+        Error<T>(:final failure) => Future.value(Error<R>(failure)),
+      };
+
+  /// Like [asyncMap] but [transform] returns its own [Result], allowing async
+  /// failures to short-circuit without nesting `Future<Result<Result<R>>>`.
+  Future<Result<R>> asyncFlatMap<R>(
+    Future<Result<R>> Function(T data) transform,
+  ) =>
+      switch (this) {
+        Success<T>(:final data) => transform(data),
+        Error<T>(:final failure) => Future.value(Error<R>(failure)),
+      };
+}
+
 /// Collapses a nested [Result] into a single layer. If the outer is an
 /// [Error], it is returned unchanged; otherwise the inner [Result] is
 /// returned.
@@ -144,6 +171,28 @@ extension FutureResultX<T> on Future<Result<T>> {
       Success<T>() => result,
       Error<T>(:final failure) => Error<T>(await transform(failure)),
     };
+  }
+
+  /// Awaits this future, invokes [action] with the data if the result is a
+  /// [Success], then returns the result unchanged. Useful for async side
+  /// effects like analytics or cache writes without transforming the value.
+  Future<Result<T>> onSuccessAsync(
+    Future<void> Function(T data) action,
+  ) async {
+    final result = await this;
+    if (result case Success<T>(:final data)) await action(data);
+    return result;
+  }
+
+  /// Awaits this future, invokes [action] with the failure if the result is an
+  /// [Error], then returns the result unchanged. Useful for async error
+  /// reporting or logging without altering the failure.
+  Future<Result<T>> onErrorAsync(
+    Future<void> Function(Failure failure) action,
+  ) async {
+    final result = await this;
+    if (result case Error<T>(:final failure)) await action(failure);
+    return result;
   }
 }
 

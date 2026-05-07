@@ -38,6 +38,62 @@ void main() {
     test('rateLimit has 429', () {
       expect(const Failure.rateLimit().code, 429);
     });
+
+    test('validation has 422 and default message', () {
+      expect(const Failure.validation().code, 422);
+      expect(const Failure.validation().message, 'Validation failed');
+    });
+  });
+
+  group('Failure.type', () {
+    test('named constructors carry the matching FailureType', () {
+      expect(const Failure.network().type, FailureType.network);
+      expect(const Failure.timeout().type, FailureType.timeout);
+      expect(
+        const Failure.badResponse(message: 'x').type,
+        FailureType.badResponse,
+      );
+      expect(const Failure.parsing().type, FailureType.parsing);
+      expect(const Failure.unauthorized().type, FailureType.unauthorized);
+      expect(const Failure.forbidden().type, FailureType.forbidden);
+      expect(const Failure.notFound().type, FailureType.notFound);
+      expect(const Failure.conflict().type, FailureType.conflict);
+      expect(const Failure.rateLimit().type, FailureType.rateLimit);
+      expect(const Failure.serverError().type, FailureType.serverError);
+      expect(const Failure.cancelled().type, FailureType.cancelled);
+      expect(const Failure.validation().type, FailureType.validation);
+      expect(const Failure.unknown().type, FailureType.unknown);
+    });
+
+    test('primary constructor defaults to FailureType.unknown', () {
+      expect(const Failure(message: 'x').type, FailureType.unknown);
+    });
+
+    test('primary constructor accepts an explicit type', () {
+      expect(
+        const Failure(message: 'x', type: FailureType.network).type,
+        FailureType.network,
+      );
+    });
+
+    test('copyWith preserves type when not supplied', () {
+      const original = Failure.serverError();
+      final copy = original.copyWith(message: 'custom');
+      expect(copy.type, FailureType.serverError);
+    });
+
+    test('copyWith overrides type when supplied', () {
+      const original = Failure.serverError();
+      final copy = original.copyWith(type: FailureType.unknown);
+      expect(copy.type, FailureType.unknown);
+    });
+
+    test('type appears in toString', () {
+      expect(
+        const Failure.notFound().toString(),
+        contains('FailureType.notFound'),
+      );
+    });
   });
 
   group('Failure.fromStatusCode', () {
@@ -60,6 +116,11 @@ void main() {
 
     test('maps 409 to conflict', () {
       expect(Failure.fromStatusCode(409).code, 409);
+    });
+
+    test('maps 422 to validation', () {
+      expect(Failure.fromStatusCode(422).code, 422);
+      expect(Failure.fromStatusCode(422).type, FailureType.validation);
     });
 
     test('maps 429 to rateLimit', () {

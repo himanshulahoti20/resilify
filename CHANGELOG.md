@@ -6,6 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## 1.1.0
+<<<<<<< Updated upstream
 
 ### Added
 
@@ -28,6 +29,143 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `Result.tryRunAsync(() => future)`). Named `asResult` rather than
   `toResult` to avoid colliding with the retrofit / chopper integrations'
   transport-specific `.toResult()` methods.
+=======
+
+### Added
+
+- **`FailureType` enum** — every `Failure` now carries a `type` field set
+  automatically by its named constructor. Switch on `failure.type` instead of
+  inspecting `failure.code` to route failures to the right UI state or analytics
+  bucket without fragile integer comparisons:
+
+  ```dart
+  switch (failure.type) {
+    FailureType.network      => showOfflineBanner(),
+    FailureType.unauthorized => pushLoginScreen(),
+    _                        => showGenericError(failure.message),
+  }
+  ```
+
+- **`Failure.validation()`** — new named constructor for HTTP 422 (Unprocessable
+  Entity) with `type = FailureType.validation`. Also handled by
+  `Failure.fromStatusCode(422)`.
+
+- **`Failure.type`** field — `FailureType` set by each named constructor. The
+  primary `Failure()` constructor accepts an optional `type` parameter that
+  defaults to `FailureType.unknown`. `copyWith` preserves `type` unless
+  explicitly overridden. `type` is included in equality, `hashCode`, and
+  `toString`.
+
+- **`Result.collectAsync()`** — async counterpart to `Result.collect()`.
+  Awaits an `Iterable<Future<Result<T>>>` in order and short-circuits on the
+  first error, returning a `Result<List<T>>`:
+
+  ```dart
+  final r = await Result.collectAsync([
+    api.fetchUser('u1'),
+    api.fetchUser('u2'),
+  ]);
+  ```
+
+- **`Result.asyncMap()` / `Result.asyncFlatMap()`** — async transform methods
+  on plain `Result<T>` (not a future). Complement `FutureResultX.mapAsync` /
+  `flatMapAsync` for cases where you already hold a resolved result and want
+  to start an async pipeline:
+
+  ```dart
+  final result = await cachedResult.asyncMap((user) => enrichUser(user));
+  ```
+
+- **`FutureResultX.onSuccessAsync()` / `onErrorAsync()`** — async side-effect
+  hooks on `Future<Result<T>>`. Mirror the synchronous `onSuccess` / `onError`
+  but accept `async` callbacks, useful for async logging, cache writes, or
+  analytics calls:
+
+  ```dart
+  await api.fetchUser(id)
+      .onSuccessAsync((u) => cache.put(id, u))
+      .onErrorAsync((f) => analytics.logError(f));
+  ```
+
+- **`ResultCache<K, V>`** — in-memory cache for `Result` values with optional
+  TTL. `getOrFetch` serves cached successes instantly and fetches on miss;
+  errors are never cached so callers can retry immediately:
+
+  ```dart
+  final cache = ResultCache<String, User>(ttl: const Duration(minutes: 5));
+  final user = await cache.getOrFetch('u1', () => api.fetchUser('u1'));
+  ```
+
+- **`ResultDeduplicator<K, V>`** — collapses concurrent calls for the same key
+  into a single in-flight future. All concurrent callers receive the same
+  result; once the future completes the key is evicted so the next call
+  triggers a fresh fetch:
+
+  ```dart
+  final dedup = ResultDeduplicator<String, User>();
+  // Three concurrent callers → one network request.
+  final results = await Future.wait([
+    dedup.run('u1', () => api.fetchUser('u1')),
+    dedup.run('u1', () => api.fetchUser('u1')),
+    dedup.run('u1', () => api.fetchUser('u1')),
+  ]);
+  ```
+
+- **`LogCallback`** — the `typedef LogCallback = void Function(String line)`
+  is now exported from the core `resilify.dart` barrel so you can type
+  callback parameters without importing the Dio barrel.
+
+## 1.0.6
+
+### Fixed
+
+- Resolved pub.dev analysis failure caused by `dart pub outdated --json`
+  crashing during dependency advisory parsing.
+- Stabilized dependency resolution to ensure compatibility with pub.dev's pana
+  analysis pipeline.
+- Fixed documentation generation issues that prevented dartdoc from running
+  successfully.
+- Corrected `documentation` URL in `pubspec.yaml` to point to a valid and
+  accessible resource.
+
+### Changed
+
+- Adjusted dependency constraints (notably `dio`) to avoid triggering advisory
+  parsing issues on pub.dev.
+- Simplified dev dependency graph to improve analysis reliability and prevent
+  toolchain conflicts.
+- Improved overall package compatibility with pub.dev scoring system and
+  analysis environment.
+
+### Documentation
+
+- Added missing dartdoc comments across public APIs to improve documentation
+  coverage and pub score.
+
+## 1.0.5
+
+### Added
+
+- **`Result.tap()`** — execute side effects (logging, debugging) on successful
+  results without transforming the value. Great for inspecting data in the
+  middle of a result chain:
+
+  ```dart
+  result.tap(print).tap(logToAnalytics).map(transformData);
+  ```
+
+- Enhanced code quality standards with stricter linting rules (upgraded `lints`
+  to ^6.1.0) — the package now adheres to the latest Dart conventions and best
+  practices for code style and correctness.
+
+### Fixed
+
+- Trailing-comma lint warnings in `lib/src/integrations/chopper_result.dart`
+  and `lib/src/result.dart` — package now passes `dart analyze --fatal-warnings`
+  with zero issues.
+- Removed deprecated transitive dependencies (`build_resolvers`,
+  `build_runner_core`) that were flagged by pub.dev.
+>>>>>>> Stashed changes
 
 ### Changed
 
