@@ -15,9 +15,14 @@
 /// ```
 library;
 
+export 'src/circuit_breaker.dart';
 export 'src/failure.dart';
+export 'src/failure_type.dart';
 export 'src/list_extensions.dart';
+export 'src/log_callback.dart';
 export 'src/result.dart';
+export 'src/result_cache.dart';
+export 'src/result_deduplicator.dart';
 export 'src/result_extensions.dart';
 export 'src/retry_helper.dart';
 export 'src/stream_extensions.dart';

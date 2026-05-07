@@ -98,6 +98,29 @@ abstract final class RetryHelper {
     return last!;
   }
 
+  /// Wraps a single [Result]-returning [operation] in a timeout. If
+  /// [operation] does not produce a [Result] within [duration], the call
+  /// returns `Error(Failure.timeout())`. Unlike `Future<T>.timeout`, this
+  /// helper *never throws* — it preserves the `Result`-only contract of
+  /// the rest of the library.
+  static Future<Result<T>> withTimeout<T>(
+    Future<Result<T>> Function() operation,
+    Duration duration, {
+    String? timeoutMessage,
+  }) async {
+    try {
+      return await operation().timeout(duration);
+    } on TimeoutException catch (e, st) {
+      return Error<T>(
+        Failure.timeout(
+          message: timeoutMessage ?? 'Operation timed out after $duration',
+          stackTrace: st,
+          cause: e,
+        ),
+      );
+    }
+  }
+
   static double _pow(double base, int exp) {
     var result = 1.0;
     for (var i = 0; i < exp; i++) {

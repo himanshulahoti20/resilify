@@ -325,6 +325,12 @@ PRs and issues are welcome at
 <https://github.com/himanshulahoti20/resilify>. Please run `dart analyze` and
 `dart test` before submitting.
 
+## ❤️ Support
+
+If you find this package helpful, consider supporting:
+
+👉 https://github.com/sponsors/himanshulahoti20
+
 ## License
 
 [MIT](LICENSE) © 2026 resilify contributors

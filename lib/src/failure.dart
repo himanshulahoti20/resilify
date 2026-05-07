@@ -1,6 +1,56 @@
 /// Defines the [Failure] value type returned by every failed [Result].
 library;
 
+import 'failure_type.dart';
+
+/// Categorical tag describing *what kind of thing* went wrong, independent
+/// of any HTTP status code or human-readable message.
+///
+/// Lets callers discriminate between failures that happen to share (or lack)
+/// a `code` — e.g. distinguishing a network failure from a parsing failure,
+/// both of which carry a `null` [Failure.code].
+enum FailureKind {
+  /// Connectivity problem: DNS lookup, no internet, socket reset.
+  network,
+
+  /// Operation exceeded its allotted time.
+  timeout,
+
+  /// Server responded but the response could not be interpreted.
+  badResponse,
+
+  /// Decoding the response body into the target type failed.
+  parsing,
+
+  /// HTTP 401 — missing or invalid credentials.
+  unauthorized,
+
+  /// HTTP 403 — authenticated but not allowed.
+  forbidden,
+
+  /// HTTP 404 — resource does not exist.
+  notFound,
+
+  /// HTTP 409 — conflict with current resource state.
+  conflict,
+
+  /// HTTP 429 — too many requests.
+  rateLimit,
+
+  /// HTTP 5xx — server-side problem.
+  serverError,
+
+  /// Operation cancelled before completion.
+  cancelled,
+
+  /// A circuit breaker is in the `open` state and rejected the call without
+  /// invoking the underlying operation.
+  circuitOpen,
+
+  /// Catch-all for unclassified failures.
+  unknown,
+}
+
 /// An immutable, structured description of *why* an operation failed.
 ///
 /// `resilify` never throws from its public API. Instead, recoverable problems
@@ -8,12 +58,18 @@ library;
 ///
 /// Use the named constructors ([Failure.network], [Failure.timeout], etc.) to
 /// model the most common HTTP / IO failure modes with consistent semantics.
+/// Every named constructor automatically sets [type] to the matching
+/// [FailureType] value so callers can switch on category without inspecting
+/// [code] or [message].
 class Failure {
   /// Creates a generic failure. Prefer the named constructors when one of the
-  /// well-known categories applies.
+  /// well-known categories applies; supply [kind] explicitly when building a
+  /// custom failure that should still participate in `kind`-based dispatch.
   const Failure({
     required this.message,
+    this.type = FailureType.unknown,
     this.code,
+    this.kind = FailureKind.unknown,
     this.stackTrace,
     this.cause,
     this.retryAfter,
@@ -26,7 +82,8 @@ class Failure {
     this.stackTrace,
     this.cause,
     this.retryAfter,
-  });
+  })  : kind = FailureKind.network,
+        type = FailureType.network;
 
   /// The operation did not complete within the configured timeout.
   const Failure.timeout({
@@ -35,7 +92,8 @@ class Failure {
     this.stackTrace,
     this.cause,
     this.retryAfter,
-  });
+  })  : kind = FailureKind.timeout,
+        type = FailureType.timeout;
 
   /// The server returned a response that could not be interpreted as expected
   /// (e.g. unexpected status, malformed envelope).
@@ -45,7 +103,8 @@ class Failure {
     this.stackTrace,
     this.cause,
     this.retryAfter,
-  });
+  })  : kind = FailureKind.badResponse,
+        type = FailureType.badResponse;
 
   /// Decoding the response body into the target type failed.
   const Failure.parsing({
@@ -53,7 +112,9 @@ class Failure {
     this.code,
     this.stackTrace,
     this.cause,
-  }) : retryAfter = null;
+  })  : retryAfter = null,
+        kind = FailureKind.parsing,
+        type = FailureType.parsing;
 
   /// HTTP 401 — the request lacks valid authentication credentials.
   const Failure.unauthorized({
@@ -61,7 +122,9 @@ class Failure {
     this.code = 401,
     this.stackTrace,
     this.cause,
-  }) : retryAfter = null;
+  })  : retryAfter = null,
+        kind = FailureKind.unauthorized,
+        type = FailureType.unauthorized;
 
   /// HTTP 403 — the server understood the request but refuses to authorize it.
   const Failure.forbidden({
@@ -69,7 +132,9 @@ class Failure {
     this.code = 403,
     this.stackTrace,
     this.cause,
-  }) : retryAfter = null;
+  })  : retryAfter = null,
+        kind = FailureKind.forbidden,
+        type = FailureType.forbidden;
 
   /// HTTP 404 — the target resource does not exist.
   const Failure.notFound({
@@ -77,7 +142,9 @@ class Failure {
     this.code = 404,
     this.stackTrace,
     this.cause,
-  }) : retryAfter = null;
+  })  : retryAfter = null,
+        kind = FailureKind.notFound,
+        type = FailureType.notFound;
 
   /// HTTP 409 — the request conflicts with the current state of the resource.
   const Failure.conflict({
@@ -85,7 +152,22 @@ class Failure {
     this.code = 409,
     this.stackTrace,
     this.cause,
-  }) : retryAfter = null;
+  })  : retryAfter = null,
+        kind = FailureKind.conflict,
+        type = FailureType.conflict;
+
+  /// HTTP 422 — the request was well-formed but failed server-side validation.
+  ///
+  /// Use [message] (or [cause]) to surface field-level validation detail to
+  /// the caller.
+  const Failure.validation({
+    this.message = 'Validation failed',
+    this.code = 422,
+    this.stackTrace,
+    this.cause,
+  })  : retryAfter = null,
+        kind = FailureKind.unknown,
+        type = FailureType.validation;
 
   /// HTTP 429 — too many requests; the client should back off.
   ///
@@ -98,7 +180,8 @@ class Failure {
     this.stackTrace,
     this.cause,
     this.retryAfter,
-  });
+  })  : kind = FailureKind.rateLimit,
+        type = FailureType.rateLimit;
 
   /// Any 5xx response from the server.
   const Failure.serverError({
@@ -107,7 +190,8 @@ class Failure {
     this.stackTrace,
     this.cause,
     this.retryAfter,
-  });
+  })  : kind = FailureKind.serverError,
+        type = FailureType.serverError;
 
   /// The request was cancelled before it could complete.
   const Failure.cancelled({
@@ -115,7 +199,9 @@ class Failure {
     this.code,
     this.stackTrace,
     this.cause,
-  }) : retryAfter = null;
+  })  : retryAfter = null,
+        kind = FailureKind.cancelled,
+        type = FailureType.cancelled;
 
   /// Catch-all for failures that do not fit any other category.
   const Failure.unknown({
@@ -123,7 +209,9 @@ class Failure {
     this.code,
     this.stackTrace,
     this.cause,
-  }) : retryAfter = null;
+  })  : retryAfter = null,
+        kind = FailureKind.unknown,
+        type = FailureType.unknown;
 
   /// Maps an HTTP status [code] onto the most specific named [Failure]
   /// constructor available, falling back to [Failure.badResponse] for any
@@ -166,6 +254,12 @@ class Failure {
           stackTrace: stackTrace,
           cause: cause,
         );
+      case 422:
+        return Failure.validation(
+          message: message ?? 'Validation failed',
+          stackTrace: stackTrace,
+          cause: cause,
+        );
       case 429:
         return Failure.rateLimit(
           message: message ?? 'Rate limit exceeded',
@@ -203,16 +297,40 @@ class Failure {
   /// Whether [code] sits in the 5xx range.
   bool get is5xx => code != null && code! >= 500 && code! < 600;
 
-  /// Whether this failure looks transient and worth retrying — true for any
-  /// 5xx, plus 408 (timeout) and 429 (rate limit). Failures with no [code]
-  /// (network, parsing, cancelled, unknown) are *not* assumed retryable here
-  /// because they cannot be distinguished from each other by code alone;
-  /// callers who want network-level retries should pass a custom `retryIf`
-  /// that inspects [cause].
+  /// Whether this failure looks transient and worth retrying. Decided
+  /// primarily by [kind]: `network`, `timeout`, `serverError`, `rateLimit`
+  /// are retryable; `parsing`, `unauthorized`, `forbidden`, `notFound`,
+  /// `conflict`, `cancelled`, `badResponse` are not. For [FailureKind.unknown]
+  /// the decision falls back to [code] (5xx, 408, 429 retryable).
   bool get isRetryable {
-    if (is5xx) return true;
-    return code == 408 || code == 429;
+    switch (kind) {
+      case FailureKind.network:
+      case FailureKind.timeout:
+      case FailureKind.serverError:
+      case FailureKind.rateLimit:
+        return true;
+      case FailureKind.parsing:
+      case FailureKind.unauthorized:
+      case FailureKind.forbidden:
+      case FailureKind.notFound:
+      case FailureKind.conflict:
+      case FailureKind.cancelled:
+      case FailureKind.badResponse:
+      case FailureKind.circuitOpen:
+        return false;
+      case FailureKind.unknown:
+        return is5xx || code == 408 || code == 429;
+    }
   }
+
+  /// Categorical tag describing the failure independently of its [code] /
+  /// [message]. Defaults to [FailureKind.unknown] for failures built with
+  /// the unstructured generic constructor.
+  final FailureKind kind;
+
+  /// Structural category of this failure, set automatically by the named
+  /// constructor used to create it.
+  final FailureType type;
 
   /// Optional protocol- or domain-specific code (typically the HTTP status).
   final int? code;
@@ -263,6 +381,8 @@ class Failure {
 
   /// Returns a copy of this failure with the supplied fields overridden.
   Failure copyWith({
+    FailureKind? kind,
+    FailureType? type,
     int? code,
     String? message,
     StackTrace? stackTrace,
@@ -270,6 +390,8 @@ class Failure {
     Duration? retryAfter,
   }) {
     return Failure(
+      kind: kind ?? this.kind,
+      type: type ?? this.type,
       code: code ?? this.code,
       message: message ?? this.message,
       stackTrace: stackTrace ?? this.stackTrace,
@@ -282,6 +404,7 @@ class Failure {
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
     return other is Failure &&
+        other.type == type &&
         other.code == code &&
         other.message == message &&
         other.cause == cause &&
@@ -289,13 +412,15 @@ class Failure {
   }
 
   @override
-  int get hashCode => Object.hash(code, message, cause, retryAfter);
+  int get hashCode => Object.hash(type, code, message, cause, retryAfter);
 
   @override
   String toString() {
     final buffer = StringBuffer('Failure(');
-    if (code != null) buffer.write('code: $code, ');
-    buffer.write('message: $message');
+    buffer.write('kind: ${kind.name}');
+    buffer.write(', type: $type');
+    if (code != null) buffer.write(', code: $code');
+    buffer.write(', message: $message');
     if (retryAfter != null) buffer.write(', retryAfter: $retryAfter');
     if (cause != null) buffer.write(', cause: $cause');
     buffer.write(')');

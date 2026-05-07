@@ -251,6 +251,33 @@ void main() {
     });
   });
 
+  group('Result.collectAsync', () {
+    test('all async Successes => Success<List>', () async {
+      final r = await Result.collectAsync<int>([
+        Future.value(const Success<int>(1)),
+        Future.value(const Success<int>(2)),
+        Future.value(const Success<int>(3)),
+      ]);
+      expect(r.isSuccess, isTrue);
+      expect(r.dataOrNull, equals([1, 2, 3]));
+    });
+
+    test('first async Error short-circuits the list', () async {
+      const f = Failure.notFound();
+      final r = await Result.collectAsync<int>([
+        Future.value(const Success<int>(1)),
+        Future.value(const Error<int>(f)),
+        Future.value(const Success<int>(3)),
+      ]);
+      expect(r, const Error<List<int>>(f));
+    });
+
+    test('empty input becomes empty Success', () async {
+      final r = await Result.collectAsync<int>([]);
+      expect(r.dataOrNull, isEmpty);
+    });
+  });
+
   group('Result.collect', () {
     test('all Successes => Success<List>', () {
       final r = Result.collect<int>([

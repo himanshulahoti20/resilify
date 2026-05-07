@@ -116,6 +116,25 @@ sealed class Result<T> {
     return Success<List<T>>(List.unmodifiable(out));
   }
 
+  /// Async counterpart to [collect]. Awaits each future in [futures] in order,
+  /// short-circuiting on the first [Error]; otherwise returns a list of all
+  /// successful values in iteration order.
+  static Future<Result<List<T>>> collectAsync<T>(
+    Iterable<Future<Result<T>>> futures,
+  ) async {
+    final out = <T>[];
+    for (final future in futures) {
+      final result = await future;
+      switch (result) {
+        case Success<T>(:final data):
+          out.add(data);
+        case Error<T>(:final failure):
+          return Error<List<T>>(failure);
+      }
+    }
+    return Success<List<T>>(List.unmodifiable(out));
+  }
+
   /// Pattern-matches on the variant, calling [success] or [error] and
   /// returning the produced value.
   R when<R>({

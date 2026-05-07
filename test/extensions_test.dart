@@ -41,6 +41,51 @@ void main() {
     });
   });
 
+  group('Result.asyncMap / asyncFlatMap', () {
+    test('asyncMap transforms Success asynchronously', () async {
+      const r = Success<int>(3);
+      final out = await r.asyncMap<int>((v) async => v * 10);
+      expect(out, const Success<int>(30));
+    });
+
+    test('asyncMap propagates Error without calling transform', () async {
+      var called = false;
+      const r = Error<int>(Failure.notFound());
+      final out = await r.asyncMap<int>((v) async {
+        called = true;
+        return v * 10;
+      });
+      expect(out.isError, isTrue);
+      expect(called, isFalse);
+    });
+
+    test('asyncFlatMap chains Success', () async {
+      const r = Success<int>(4);
+      final out =
+          await r.asyncFlatMap<String>((v) async => Success<String>('x$v'));
+      expect(out, const Success<String>('x4'));
+    });
+
+    test('asyncFlatMap propagates Error without calling transform', () async {
+      var called = false;
+      const r = Error<int>(Failure.unauthorized());
+      final out = await r.asyncFlatMap<String>((v) async {
+        called = true;
+        return Success<String>('x$v');
+      });
+      expect(out.isError, isTrue);
+      expect(called, isFalse);
+    });
+
+    test('asyncFlatMap surfaces returned Error', () async {
+      const r = Success<int>(5);
+      final out = await r.asyncFlatMap<String>(
+        (_) async => const Error<String>(Failure.serverError()),
+      );
+      expect(out.errorOrNull?.code, 500);
+    });
+  });
+
   group('FutureResultX', () {
     test('mapAsync transforms Success', () async {
       final out = await Future<Result<int>>.value(
@@ -103,6 +148,65 @@ void main() {
         const Success<int>(2),
       ).mapErrorAsync((f) async => const Failure.unauthorized());
       expect(out, const Success<int>(2));
+    });
+
+    test('onSuccessAsync fires on Success and returns result', () async {
+      var seen = -1;
+      final out = await Future<Result<int>>.value(
+        const Success<int>(7),
+      ).onSuccessAsync((v) async => seen = v);
+      expect(seen, 7);
+      expect(out, const Success<int>(7));
+    });
+
+    test('onSuccessAsync skips on Error', () async {
+      var called = false;
+      final out = await Future<Result<int>>.value(
+        const Error<int>(Failure.network()),
+      ).onSuccessAsync((_) async => called = true);
+      expect(called, isFalse);
+      expect(out.isError, isTrue);
+    });
+
+    test('onErrorAsync fires on Error and returns result', () async {
+      Failure? captured;
+      final out = await Future<Result<int>>.value(
+        const Error<int>(Failure.unauthorized()),
+      ).onErrorAsync((f) async => captured = f);
+      expect(captured?.code, 401);
+      expect(out.isError, isTrue);
+    });
+
+    test('onErrorAsync skips on Success', () async {
+      var called = false;
+      final out = await Future<Result<int>>.value(
+        const Success<int>(3),
+      ).onErrorAsync((_) async => called = true);
+      expect(called, isFalse);
+      expect(out, const Success<int>(3));
+    });
+  });
+
+  group('FutureToResultX (asResult)', () {
+    test('non-throwing future becomes Success', () async {
+      final out = await Future<int>.value(42).asResult();
+      expect(out, const Success<int>(42));
+    });
+
+    test('throwing future becomes Error with Failure.unknown by default',
+        () async {
+      final out = await Future<int>.error(StateError('boom')).asResult();
+      expect(out.isError, isTrue);
+      expect(out.errorOrNull?.kind, FailureKind.unknown);
+      expect(out.errorOrNull?.message, contains('boom'));
+    });
+
+    test('onError can translate the thrown object into a domain Failure',
+        () async {
+      final out = await Future<int>.error(StateError('boom')).asResult(
+        onError: (_, __) => const Failure.unauthorized(),
+      );
+      expect(out, const Error<int>(Failure.unauthorized()));
     });
   });
 
