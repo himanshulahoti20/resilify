@@ -5,6 +5,8 @@ homepage: https://github.com/himanshulahoti20/resilify
 repository: https://github.com/himanshulahoti20/resilify
 issue_tracker: https://github.com/himanshulahoti20/resilify/issues
 documentation: https://pub.dev/documentation/resilify/latest/
+funding:
+  - https://github.com/sponsors/himanshulahoti20
 
 environment:
   sdk: ^3.0.0
