@@ -6,7 +6,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## 1.1.0
-<<<<<<< Updated upstream
 
 ### Added
 
@@ -16,27 +15,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and fast-fails calls for `resetTimeout`, then admits a single probe.
   Configurable `shouldTrip` predicate (defaults to `failure.isRetryable`)
   and `onStateChange` observer. Pluggable clock for tests.
+
 - **`FailureKind` enum + `Failure.kind` field** — categorical tag that
   discriminates failures independently of `code` / `message`. Enables
   accurate retry decisions for code-less failures (a `network` failure is
   retryable; a `parsing` failure is not). New `FailureKind.circuitOpen`
   marks fast-fail responses from `CircuitBreaker.execute`.
-- **`RetryHelper.withTimeout`** — standalone helper that wraps a single
-  attempt in a timeout, returning `Error(Failure.timeout())` instead of
-  throwing.
-- **`Future<T>.asResult()` extension** — terser bridge from a throwing
-  `Future<T>` into a `Future<Result<T>>` (vs the longer
-  `Result.tryRunAsync(() => future)`). Named `asResult` rather than
-  `toResult` to avoid colliding with the retrofit / chopper integrations'
-  transport-specific `.toResult()` methods.
-=======
-
-### Added
 
 - **`FailureType` enum** — every `Failure` now carries a `type` field set
   automatically by its named constructor. Switch on `failure.type` instead of
-  inspecting `failure.code` to route failures to the right UI state or analytics
-  bucket without fragile integer comparisons:
+  inspecting `failure.code` to route failures to the right UI state or
+  analytics bucket without fragile integer comparisons:
 
   ```dart
   switch (failure.type) {
@@ -50,11 +39,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Entity) with `type = FailureType.validation`. Also handled by
   `Failure.fromStatusCode(422)`.
 
-- **`Failure.type`** field — `FailureType` set by each named constructor. The
-  primary `Failure()` constructor accepts an optional `type` parameter that
-  defaults to `FailureType.unknown`. `copyWith` preserves `type` unless
-  explicitly overridden. `type` is included in equality, `hashCode`, and
-  `toString`.
+- **`RetryHelper.withTimeout`** — standalone helper that wraps a single
+  attempt in a timeout, returning `Error(Failure.timeout())` instead of
+  throwing.
+
+- **`Future<T>.asResult()` extension** — terser bridge from a throwing
+  `Future<T>` into a `Future<Result<T>>` (vs the longer
+  `Result.tryRunAsync(() => future)`). Named `asResult` rather than
+  `toResult` to avoid colliding with the retrofit / chopper integrations'
+  transport-specific `.toResult()` methods.
 
 - **`Result.collectAsync()`** — async counterpart to `Result.collect()`.
   Awaits an `Iterable<Future<Result<T>>>` in order and short-circuits on the
@@ -115,6 +108,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   is now exported from the core `resilify.dart` barrel so you can type
   callback parameters without importing the Dio barrel.
 
+### Changed
+
+- `Failure.isRetryable` is now decided primarily by `FailureKind`, so
+  `Failure.network()` and similar code-less transient failures are now
+  reported as retryable. Failures built with the unstructured generic
+  constructor still fall back to `code`-based heuristics. Existing
+  `code`-based retry decisions are unchanged.
+- `Failure.toString()` now includes both `kind:` and `type:` for easier
+  diagnostics. The `==` / `hashCode` contract is unchanged (still `type` +
+  `code` + `message` + `cause` + `retryAfter`) so existing equality-based
+  assertions keep working.
+
 ## 1.0.6
 
 ### Fixed
@@ -165,18 +170,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   with zero issues.
 - Removed deprecated transitive dependencies (`build_resolvers`,
   `build_runner_core`) that were flagged by pub.dev.
->>>>>>> Stashed changes
 
 ### Changed
 
-- `Failure.isRetryable` is now decided primarily by `FailureKind`, so
-  `Failure.network()` and similar code-less transient failures are now
-  reported as retryable. Failures built with the unstructured generic
-  constructor still fall back to `code`-based heuristics. Existing
-  `code`-based retry decisions are unchanged.
-- `Failure.toString()` now includes `kind:` for easier diagnostics. The
-  `==` / `hashCode` contract is unchanged (still `code` + `message` +
-  `cause`) so existing equality-based assertions keep working.
+- Updated dev dependencies to latest versions:
+  - `lints`: ^4.0.0 → ^6.1.0 for stricter code quality checks
+  - `retrofit_generator`: ^8.0.0 → ^10.2.5
+  - `build_runner`: ^2.4.0 → ^2.15.0
+  - `chopper_generator`: ^8.0.0 → ^8.6.1
+  - `json_serializable`: ^6.7.0 → ^6.13.2
+  - `test`: ^1.25.0 → ^1.31.1
+  - All transitive dependencies updated to latest compatible versions.
+
+## 1.0.4
+
+### Added
+
+- **`Failure.retryAfter`** — a `Duration?` field on `Failure` that surfaces
+  the server's back-off hint from a `Retry-After` HTTP header. Populated
+  automatically for 429 / 5xx responses by both `HttpResultHandler` and the
+  Dio integration's `mapDioException`. Pair with `RetryHelper.retry`'s
+  `delay` parameter to honor the server's wait time exactly:
+
+  ```dart
+  result.errorOrNull?.retryAfter // Duration(seconds: 30) when present
+  ```
+
+- **`Failure.parseRetryAfter(String?)`** — static helper that converts the
+  seconds form of an HTTP `Retry-After` header into a `Duration`. Returns
+  `null` for null / blank / non-numeric input; clamps negatives to zero. The
+  HTTP-date form is intentionally left to callers so the core library stays
+  free of `dart:io`.
+- `platforms:` declaration in `pubspec.yaml` (Android, iOS, Linux, macOS,
+  Windows) so pub.dev surfaces verified platform support on the package page.
+- `documentation:` link in `pubspec.yaml` pointing at the published dartdoc.
+- Smoke tests for `HttpResultHandler` covering JSON GET/POST round-trips,
+  query parameter merging, default-header propagation, 404 / 429 / 5xx
+  mapping, `Retry-After` extraction, and parsing failures — closing the
+  integration test gap flagged in the 1.0.3 audit.
+
+### Fixed
+
+- Trailing-comma lint warnings in `dio_result.dart` and `logger.dart` so the
+  package now ships with a clean `dart analyze`.
 
 ## 1.0.3
 

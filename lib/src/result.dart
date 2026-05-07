@@ -67,14 +67,9 @@ sealed class Result<T> {
   /// an [Error] with the failure returned by [onNull] (defaulting to a
   /// generic `Failure(message: 'Value was null')`). Handy for bridging APIs
   /// that signal absence with `null` (cache lookups, `firstWhereOrNull`).
-  static Result<T> fromNullable<T>(
-    T? value, {
-    Failure Function()? onNull,
-  }) {
+  static Result<T> fromNullable<T>(T? value, {Failure Function()? onNull}) {
     if (value != null) return Success<T>(value);
-    return Error<T>(
-      onNull?.call() ?? const Failure(message: 'Value was null'),
-    );
+    return Error<T>(onNull?.call() ?? const Failure(message: 'Value was null'));
   }
 
   /// Combines two [Result]s into a `Result<(A, B)>`. Returns the first
@@ -149,10 +144,7 @@ sealed class Result<T> {
 
   /// Alias for [when] with positional callbacks, matching the Either/Result
   /// convention used in functional libraries.
-  R fold<R>(
-    R Function(T data) onSuccess,
-    R Function(Failure failure) onError,
-  );
+  R fold<R>(R Function(T data) onSuccess, R Function(Failure failure) onError);
 
   /// If this is a [Success], applies [transform] to the data and wraps the
   /// outcome in a new [Success]. Otherwise propagates the [Error] unchanged.

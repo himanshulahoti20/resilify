@@ -20,9 +20,8 @@ class Tick {
 
 Future<void> main() async {
   final ws = WebSocketResultHandler<Tick>(
-    channelFactory: () => WebSocketChannel.connect(
-      Uri.parse('wss://example.com/ticks'),
-    ),
+    channelFactory: () =>
+        WebSocketChannel.connect(Uri.parse('wss://example.com/ticks')),
     parser: (raw) =>
         Tick.fromJson(jsonDecode(raw as String) as Map<String, dynamic>),
     reconnect: const ReconnectConfig(

@@ -1,7 +1,8 @@
 /// Defines the [Failure] value type returned by every failed [Result].
 library;
 
-<<<<<<< Updated upstream
+import 'failure_type.dart';
+
 /// Categorical tag describing *what kind of thing* went wrong, independent
 /// of any HTTP status code or human-readable message.
 ///
@@ -49,9 +50,6 @@ enum FailureKind {
   /// Catch-all for unclassified failures.
   unknown,
 }
-=======
-import 'failure_type.dart';
->>>>>>> Stashed changes
 
 /// An immutable, structured description of *why* an operation failed.
 ///
@@ -74,6 +72,7 @@ class Failure {
     this.kind = FailureKind.unknown,
     this.stackTrace,
     this.cause,
+    this.retryAfter,
   });
 
   /// A connectivity problem (DNS lookup failure, no internet, socket reset).
@@ -82,12 +81,9 @@ class Failure {
     this.code,
     this.stackTrace,
     this.cause,
-<<<<<<< Updated upstream
-  }) : kind = FailureKind.network;
-=======
     this.retryAfter,
-  }) : type = FailureType.network;
->>>>>>> Stashed changes
+  })  : kind = FailureKind.network,
+        type = FailureType.network;
 
   /// The operation did not complete within the configured timeout.
   const Failure.timeout({
@@ -95,12 +91,9 @@ class Failure {
     this.code = 408,
     this.stackTrace,
     this.cause,
-<<<<<<< Updated upstream
-  }) : kind = FailureKind.timeout;
-=======
     this.retryAfter,
-  }) : type = FailureType.timeout;
->>>>>>> Stashed changes
+  })  : kind = FailureKind.timeout,
+        type = FailureType.timeout;
 
   /// The server returned a response that could not be interpreted as expected
   /// (e.g. unexpected status, malformed envelope).
@@ -109,12 +102,9 @@ class Failure {
     this.code,
     this.stackTrace,
     this.cause,
-<<<<<<< Updated upstream
-  }) : kind = FailureKind.badResponse;
-=======
     this.retryAfter,
-  }) : type = FailureType.badResponse;
->>>>>>> Stashed changes
+  })  : kind = FailureKind.badResponse,
+        type = FailureType.badResponse;
 
   /// Decoding the response body into the target type failed.
   const Failure.parsing({
@@ -122,12 +112,9 @@ class Failure {
     this.code,
     this.stackTrace,
     this.cause,
-<<<<<<< Updated upstream
-  }) : kind = FailureKind.parsing;
-=======
   })  : retryAfter = null,
+        kind = FailureKind.parsing,
         type = FailureType.parsing;
->>>>>>> Stashed changes
 
   /// HTTP 401 — the request lacks valid authentication credentials.
   const Failure.unauthorized({
@@ -135,12 +122,9 @@ class Failure {
     this.code = 401,
     this.stackTrace,
     this.cause,
-<<<<<<< Updated upstream
-  }) : kind = FailureKind.unauthorized;
-=======
   })  : retryAfter = null,
+        kind = FailureKind.unauthorized,
         type = FailureType.unauthorized;
->>>>>>> Stashed changes
 
   /// HTTP 403 — the server understood the request but refuses to authorize it.
   const Failure.forbidden({
@@ -148,12 +132,9 @@ class Failure {
     this.code = 403,
     this.stackTrace,
     this.cause,
-<<<<<<< Updated upstream
-  }) : kind = FailureKind.forbidden;
-=======
   })  : retryAfter = null,
+        kind = FailureKind.forbidden,
         type = FailureType.forbidden;
->>>>>>> Stashed changes
 
   /// HTTP 404 — the target resource does not exist.
   const Failure.notFound({
@@ -161,12 +142,9 @@ class Failure {
     this.code = 404,
     this.stackTrace,
     this.cause,
-<<<<<<< Updated upstream
-  }) : kind = FailureKind.notFound;
-=======
   })  : retryAfter = null,
+        kind = FailureKind.notFound,
         type = FailureType.notFound;
->>>>>>> Stashed changes
 
   /// HTTP 409 — the request conflicts with the current state of the resource.
   const Failure.conflict({
@@ -174,10 +152,8 @@ class Failure {
     this.code = 409,
     this.stackTrace,
     this.cause,
-<<<<<<< Updated upstream
-  }) : kind = FailureKind.conflict;
-=======
   })  : retryAfter = null,
+        kind = FailureKind.conflict,
         type = FailureType.conflict;
 
   /// HTTP 422 — the request was well-formed but failed server-side validation.
@@ -190,21 +166,22 @@ class Failure {
     this.stackTrace,
     this.cause,
   })  : retryAfter = null,
+        kind = FailureKind.unknown,
         type = FailureType.validation;
->>>>>>> Stashed changes
 
   /// HTTP 429 — too many requests; the client should back off.
+  ///
+  /// When the server sends a `Retry-After` header, parse it via
+  /// [Failure.parseRetryAfter] and pass the resulting [Duration] as
+  /// [retryAfter] so callers can sleep exactly that long before retrying.
   const Failure.rateLimit({
     this.message = 'Rate limit exceeded',
     this.code = 429,
     this.stackTrace,
     this.cause,
-<<<<<<< Updated upstream
-  }) : kind = FailureKind.rateLimit;
-=======
     this.retryAfter,
-  }) : type = FailureType.rateLimit;
->>>>>>> Stashed changes
+  })  : kind = FailureKind.rateLimit,
+        type = FailureType.rateLimit;
 
   /// Any 5xx response from the server.
   const Failure.serverError({
@@ -212,12 +189,9 @@ class Failure {
     this.code = 500,
     this.stackTrace,
     this.cause,
-<<<<<<< Updated upstream
-  }) : kind = FailureKind.serverError;
-=======
     this.retryAfter,
-  }) : type = FailureType.serverError;
->>>>>>> Stashed changes
+  })  : kind = FailureKind.serverError,
+        type = FailureType.serverError;
 
   /// The request was cancelled before it could complete.
   const Failure.cancelled({
@@ -225,12 +199,9 @@ class Failure {
     this.code,
     this.stackTrace,
     this.cause,
-<<<<<<< Updated upstream
-  }) : kind = FailureKind.cancelled;
-=======
   })  : retryAfter = null,
+        kind = FailureKind.cancelled,
         type = FailureType.cancelled;
->>>>>>> Stashed changes
 
   /// Catch-all for failures that do not fit any other category.
   const Failure.unknown({
@@ -238,12 +209,9 @@ class Failure {
     this.code,
     this.stackTrace,
     this.cause,
-<<<<<<< Updated upstream
-  }) : kind = FailureKind.unknown;
-=======
   })  : retryAfter = null,
+        kind = FailureKind.unknown,
         type = FailureType.unknown;
->>>>>>> Stashed changes
 
   /// Maps an HTTP status [code] onto the most specific named [Failure]
   /// constructor available, falling back to [Failure.badResponse] for any
@@ -355,16 +323,14 @@ class Failure {
     }
   }
 
-<<<<<<< Updated upstream
   /// Categorical tag describing the failure independently of its [code] /
   /// [message]. Defaults to [FailureKind.unknown] for failures built with
   /// the unstructured generic constructor.
   final FailureKind kind;
-=======
+
   /// Structural category of this failure, set automatically by the named
   /// constructor used to create it.
   final FailureType type;
->>>>>>> Stashed changes
 
   /// Optional protocol- or domain-specific code (typically the HTTP status).
   final int? code;
@@ -378,28 +344,59 @@ class Failure {
   /// The underlying error/exception that triggered this failure, if any.
   final Object? cause;
 
+  /// Server-supplied hint for how long to wait before retrying, typically
+  /// extracted from an HTTP `Retry-After` header on a 429 or 503 response.
+  ///
+  /// Use [Failure.parseRetryAfter] to convert a raw header value into a
+  /// [Duration]. Pair with `RetryHelper.retry`'s `retryIf` to honor the
+  /// server's back-off hint:
+  ///
+  /// ```dart
+  /// await RetryHelper.retry(
+  ///   () => api.get(...),
+  ///   retryIf: (f) => f.isRetryable,
+  ///   delay: failure.retryAfter ?? const Duration(milliseconds: 500),
+  /// );
+  /// ```
+  final Duration? retryAfter;
+
+  /// Parses an HTTP `Retry-After` header value into a [Duration].
+  ///
+  /// Supports the **seconds form** of RFC 7231 §7.1.3 (e.g. `"120"`). Negative
+  /// values clamp to [Duration.zero]. Returns `null` if [header] is `null`,
+  /// blank, or non-numeric.
+  ///
+  /// The HTTP-date form (`"Wed, 21 Oct 2026 07:28:00 GMT"`) is intentionally
+  /// not parsed here so the core library stays free of `dart:io`. Callers that
+  /// need it can decode the date themselves and pass the resulting [Duration]
+  /// to the [retryAfter] field directly.
+  static Duration? parseRetryAfter(String? header) {
+    if (header == null) return null;
+    final trimmed = header.trim();
+    if (trimmed.isEmpty) return null;
+    final seconds = int.tryParse(trimmed);
+    if (seconds == null) return null;
+    return Duration(seconds: seconds < 0 ? 0 : seconds);
+  }
+
   /// Returns a copy of this failure with the supplied fields overridden.
   Failure copyWith({
-<<<<<<< Updated upstream
     FailureKind? kind,
-=======
     FailureType? type,
->>>>>>> Stashed changes
     int? code,
     String? message,
     StackTrace? stackTrace,
     Object? cause,
+    Duration? retryAfter,
   }) {
     return Failure(
-<<<<<<< Updated upstream
       kind: kind ?? this.kind,
-=======
       type: type ?? this.type,
->>>>>>> Stashed changes
       code: code ?? this.code,
       message: message ?? this.message,
       stackTrace: stackTrace ?? this.stackTrace,
       cause: cause ?? this.cause,
+      retryAfter: retryAfter ?? this.retryAfter,
     );
   }
 
@@ -410,29 +407,21 @@ class Failure {
         other.type == type &&
         other.code == code &&
         other.message == message &&
-        other.cause == cause;
+        other.cause == cause &&
+        other.retryAfter == retryAfter;
   }
 
   @override
-<<<<<<< Updated upstream
-  int get hashCode => Object.hash(code, message, cause);
-=======
   int get hashCode => Object.hash(type, code, message, cause, retryAfter);
->>>>>>> Stashed changes
 
   @override
   String toString() {
     final buffer = StringBuffer('Failure(');
-<<<<<<< Updated upstream
     buffer.write('kind: ${kind.name}');
-    if (code != null) buffer.write(', code: $code');
-    buffer.write(', message: $message');
-=======
-    buffer.write('type: $type');
+    buffer.write(', type: $type');
     if (code != null) buffer.write(', code: $code');
     buffer.write(', message: $message');
     if (retryAfter != null) buffer.write(', retryAfter: $retryAfter');
->>>>>>> Stashed changes
     if (cause != null) buffer.write(', cause: $cause');
     buffer.write(')');
     return buffer.toString();

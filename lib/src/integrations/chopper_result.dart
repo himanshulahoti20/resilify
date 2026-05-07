@@ -41,11 +41,7 @@ Failure defaultChopperFailureMapper<BodyType>(Response<BodyType> response) {
     401 => Failure.unauthorized(cause: body),
     404 => Failure.notFound(cause: body),
     >= 500 && < 600 => Failure.serverError(code: code, cause: body),
-    _ => Failure.badResponse(
-        code: code,
-        message: 'HTTP $code',
-        cause: body,
-      ),
+    _ => Failure.badResponse(code: code, message: 'HTTP $code', cause: body),
   };
 }
 
