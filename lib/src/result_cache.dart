@@ -49,7 +49,8 @@ class ResultCache<K, V> {
 
   /// Returns the cached value for [key] if present and live; otherwise calls
   /// [fetch], caches the result if it is a [Success], and returns it.
-  Future<Result<V>> getOrFetch(K key, Future<Result<V>> Function() fetch) async {
+  Future<Result<V>> getOrFetch(
+      K key, Future<Result<V>> Function() fetch) async {
     final cached = get(key);
     if (cached != null) return cached;
     final result = await fetch();

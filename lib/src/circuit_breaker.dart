@@ -90,8 +90,7 @@ class CircuitBreaker {
     // open -> halfOpen if reset elapsed.
     if (_state == CircuitBreakerState.open) {
       final openedAt = _openedAt;
-      if (openedAt != null &&
-          _clock().difference(openedAt) >= resetTimeout) {
+      if (openedAt != null && _clock().difference(openedAt) >= resetTimeout) {
         _transition(CircuitBreakerState.halfOpen);
       } else {
         return Error<T>(_openFailure());
