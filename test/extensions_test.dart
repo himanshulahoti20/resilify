@@ -41,6 +41,68 @@ void main() {
     });
   });
 
+  group('ResultX.recover / recoverWith (sync)', () {
+    test('recover converts Error into Success', () {
+      final r = const Error<int>(Failure.serverError()).recover((_) => 0);
+      expect(r, const Success<int>(0));
+    });
+
+    test('recover passes Success through unchanged', () {
+      var called = false;
+      final r = const Success<int>(7).recover((_) {
+        called = true;
+        return 0;
+      });
+      expect(r, const Success<int>(7));
+      expect(called, isFalse);
+    });
+
+    test('recoverWith may return another Error', () {
+      final r = const Error<int>(Failure.serverError()).recoverWith(
+        (_) => const Error<int>(Failure.unauthorized()),
+      );
+      expect(r.errorOrNull?.code, 401);
+    });
+
+    test('recoverWith may return Success', () {
+      final r = const Error<int>(Failure.serverError())
+          .recoverWith((_) => const Success<int>(42));
+      expect(r, const Success<int>(42));
+    });
+  });
+
+  group('ResultX.ensure', () {
+    test('Success passing predicate is preserved', () {
+      final r = const Success<int>(5).ensure(
+        (v) => v > 0,
+        (_) => const Failure.badResponse(message: 'non-positive'),
+      );
+      expect(r, const Success<int>(5));
+    });
+
+    test('Success failing predicate becomes Error', () {
+      final r = const Success<int>(-1).ensure(
+        (v) => v > 0,
+        (v) => Failure.badResponse(message: 'got $v'),
+      );
+      expect(r.isError, isTrue);
+      expect(r.errorOrNull?.message, 'got -1');
+    });
+
+    test('Error passes through without invoking predicate', () {
+      var called = false;
+      final r = const Error<int>(Failure.notFound()).ensure(
+        (v) {
+          called = true;
+          return true;
+        },
+        (_) => const Failure.badResponse(message: 'never'),
+      );
+      expect(r.isError, isTrue);
+      expect(called, isFalse);
+    });
+  });
+
   group('Result.asyncMap / asyncFlatMap', () {
     test('asyncMap transforms Success asynchronously', () async {
       const r = Success<int>(3);

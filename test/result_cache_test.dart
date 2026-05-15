@@ -84,6 +84,39 @@ void main() {
     });
   });
 
+  group('ResultCache.keys / invalidateWhere', () {
+    test('keys returns the live key set', () {
+      final cache = ResultCache<String, int>();
+      cache.put('a', const Success<int>(1));
+      cache.put('b', const Success<int>(2));
+      expect(cache.keys.toSet(), {'a', 'b'});
+    });
+
+    test('keys snapshot is unmodifiable', () {
+      final cache = ResultCache<String, int>();
+      cache.put('a', const Success<int>(1));
+      expect(() => (cache.keys as List).add('x'), throwsUnsupportedError);
+    });
+
+    test('invalidateWhere removes matching entries and reports count', () {
+      final cache = ResultCache<String, int>();
+      cache.put('user:1', const Success<int>(1));
+      cache.put('user:2', const Success<int>(2));
+      cache.put('post:1', const Success<int>(3));
+      final removed = cache.invalidateWhere((k) => k.startsWith('user:'));
+      expect(removed, 2);
+      expect(cache.size, 1);
+      expect(cache.containsKey('post:1'), isTrue);
+    });
+
+    test('invalidateWhere returns 0 when nothing matches', () {
+      final cache = ResultCache<String, int>();
+      cache.put('a', const Success<int>(1));
+      expect(cache.invalidateWhere((k) => k == 'missing'), 0);
+      expect(cache.size, 1);
+    });
+  });
+
   group('ResultCache.getOrFetch', () {
     test('fetches and caches on miss', () async {
       final cache = ResultCache<String, int>();

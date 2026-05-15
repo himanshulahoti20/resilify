@@ -61,8 +61,25 @@ class ResultCache<K, V> {
   /// Removes the entry for [key], if any.
   void invalidate(K key) => _store.remove(key);
 
+  /// Removes every entry whose [K] satisfies [test]. Returns the number of
+  /// entries removed. Useful for tag-style invalidation when keys encode
+  /// resource type or user scope (e.g. `cache.invalidateWhere((k) =>
+  /// k.startsWith('user:'))`).
+  int invalidateWhere(bool Function(K key) test) {
+    final toRemove = _store.keys.where(test).toList(growable: false);
+    for (final key in toRemove) {
+      _store.remove(key);
+    }
+    return toRemove.length;
+  }
+
   /// Removes all entries from the cache.
   void clear() => _store.clear();
+
+  /// An unmodifiable snapshot of the keys currently in the cache. Includes
+  /// keys whose entries may have expired but have not yet been read (and thus
+  /// not yet evicted). Useful for diagnostics and bulk invalidation.
+  Iterable<K> get keys => List.unmodifiable(_store.keys);
 
   /// Whether the cache contains a live (non-expired) entry for [key].
   bool containsKey(K key) => get(key) != null;
