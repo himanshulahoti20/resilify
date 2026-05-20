@@ -76,6 +76,45 @@ extension ResultX<T> on Result<T> {
     if (this case Success<T>(:final data)) action(data);
     return this;
   }
+
+  /// Synchronous counterpart to [FutureResultX.recover]. If this is an
+  /// [Error], substitutes a default success value computed from the failure;
+  /// otherwise propagates the [Success] unchanged.
+  Result<T> recover(T Function(Failure failure) recovery) => switch (this) {
+        Success<T>() => this,
+        Error<T>(:final failure) => Success<T>(recovery(failure)),
+      };
+
+  /// Synchronous counterpart to [FutureResultX.recoverWith]. If this is an
+  /// [Error], delegates to [recovery] for a replacement [Result]; otherwise
+  /// propagates the [Success] unchanged.
+  Result<T> recoverWith(Result<T> Function(Failure failure) recovery) =>
+      switch (this) {
+        Success<T>() => this,
+        Error<T>(:final failure) => recovery(failure),
+      };
+
+  /// If this is a [Success] and [predicate] returns `false` for its data,
+  /// converts it into an [Error] using [onUnmet]. Otherwise propagates the
+  /// result unchanged. Handy for post-success domain validation, e.g. an HTTP
+  /// 200 envelope whose body still indicates a logical failure.
+  ///
+  /// ```dart
+  /// final r = await api.fetchOrder(id);
+  /// final valid = r.ensure(
+  ///   (o) => o.items.isNotEmpty,
+  ///   (o) => const Failure.badResponse(message: 'Empty order'),
+  /// );
+  /// ```
+  Result<T> ensure(
+    bool Function(T data) predicate,
+    Failure Function(T data) onUnmet,
+  ) =>
+      switch (this) {
+        Success<T>(:final data) =>
+          predicate(data) ? this : Error<T>(onUnmet(data)),
+        Error<T>() => this,
+      };
 }
 
 /// Async transformations applied directly to a [Result] (not a future).

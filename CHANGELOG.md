@@ -5,6 +5,43 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 1.1.1
+
+### Added
+
+- **`ResultX.recover()` / `ResultX.recoverWith()` (sync)** — synchronous
+  counterparts to the existing `FutureResultX.recover` /
+  `recoverWith`. `recover` substitutes a fallback success value computed
+  from the [Failure]; `recoverWith` delegates to a callback that returns
+  its own [Result] (which may itself be an [Error]).
+
+  ```dart
+  final user = cachedResult.recover((f) => User.guest());
+  ```
+
+- **`ResultX.ensure()`** — post-success validation that turns a [Success]
+  into an [Error] when a predicate fails, leaving an existing [Error]
+  untouched. Useful when an HTTP 200 envelope still encodes a logical
+  failure (empty payload, server-side flag, etc.).
+
+  ```dart
+  final valid = orderResult.ensure(
+    (o) => o.items.isNotEmpty,
+    (o) => const Failure.badResponse(message: 'Empty order'),
+  );
+  ```
+
+- **`ResultCache.keys`** — unmodifiable snapshot of the cache key set for
+  diagnostics and ad-hoc inspection.
+
+- **`ResultCache.invalidateWhere()`** — bulk invalidation by predicate,
+  returning the number of entries removed. Enables tag-style eviction
+  when keys encode resource type or user scope:
+
+  ```dart
+  cache.invalidateWhere((k) => k.startsWith('user:'));
+  ```
+
 ## 1.1.0
 
 ### Added
