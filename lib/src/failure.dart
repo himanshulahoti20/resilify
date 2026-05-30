@@ -47,6 +47,10 @@ enum FailureKind {
   /// invoking the underlying operation.
   circuitOpen,
 
+  /// A bulkhead concurrency limiter rejected the call because both the
+  /// in-flight slots and the queue were full.
+  bulkheadRejected,
+
   /// Catch-all for unclassified failures.
   unknown,
 }
@@ -213,6 +217,19 @@ class Failure {
         kind = FailureKind.unknown,
         type = FailureType.unknown;
 
+  /// A bulkhead concurrency limiter rejected the call because both the
+  /// in-flight slots and the queue were full. Treated as a transient failure
+  /// by [isRetryable]; callers may want to back off using [retryAfter] before
+  /// trying again.
+  const Failure.bulkheadRejected({
+    this.message = 'Bulkhead rejected the call: at capacity',
+    this.code,
+    this.stackTrace,
+    this.cause,
+    this.retryAfter,
+  })  : kind = FailureKind.bulkheadRejected,
+        type = FailureType.bulkheadRejected;
+
   /// Maps an HTTP status [code] onto the most specific named [Failure]
   /// constructor available, falling back to [Failure.badResponse] for any
   /// other 4xx and [Failure.serverError] for any other 5xx. Codes outside the
@@ -308,6 +325,7 @@ class Failure {
       case FailureKind.timeout:
       case FailureKind.serverError:
       case FailureKind.rateLimit:
+      case FailureKind.bulkheadRejected:
         return true;
       case FailureKind.parsing:
       case FailureKind.unauthorized:

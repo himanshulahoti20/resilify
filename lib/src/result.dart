@@ -116,6 +116,34 @@ sealed class Result<T> {
     return Success<List<T>>(List.unmodifiable(out));
   }
 
+  /// Splits an iterable of [Result]s into two parallel lists: the unwrapped
+  /// [Success] values and the unwrapped [Failure]s, preserving iteration
+  /// order within each. Unlike [collect], does **not** short-circuit on the
+  /// first error — useful for batch operations where you want to surface
+  /// partial progress alongside what failed.
+  ///
+  /// ```dart
+  /// final (saved, errors) = Result.partition(
+  ///   await Future.wait(orders.map(api.save)),
+  /// );
+  /// log.info('saved ${saved.length}, failed ${errors.length}');
+  /// ```
+  static (List<T> successes, List<Failure> failures) partition<T>(
+    Iterable<Result<T>> results,
+  ) {
+    final successes = <T>[];
+    final failures = <Failure>[];
+    for (final r in results) {
+      switch (r) {
+        case Success<T>(:final data):
+          successes.add(data);
+        case Error<T>(:final failure):
+          failures.add(failure);
+      }
+    }
+    return (List.unmodifiable(successes), List.unmodifiable(failures));
+  }
+
   /// Async counterpart to [collect]. Awaits each future in [futures] in order,
   /// short-circuiting on the first [Error]; otherwise returns a list of all
   /// successful values in iteration order.

@@ -15,6 +15,7 @@
 /// ```
 library;
 
+export 'src/bulkhead.dart';
 export 'src/circuit_breaker.dart';
 export 'src/failure.dart';
 export 'src/failure_type.dart';

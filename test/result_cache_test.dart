@@ -117,6 +117,45 @@ void main() {
     });
   });
 
+  group('ResultCache.putIfAbsent', () {
+    test('inserts and returns the value on first call', () {
+      final cache = ResultCache<String, int>();
+      var calls = 0;
+      final r = cache.putIfAbsent('k', () {
+        calls++;
+        return const Success<int>(7);
+      });
+      expect(r, const Success<int>(7));
+      expect(calls, 1);
+      expect(cache.get('k'), const Success<int>(7));
+    });
+
+    test('returns existing entry without calling ifAbsent', () {
+      final cache = ResultCache<String, int>();
+      cache.put('k', const Success<int>(1));
+      var calls = 0;
+      final r = cache.putIfAbsent('k', () {
+        calls++;
+        return const Success<int>(2);
+      });
+      expect(r, const Success<int>(1));
+      expect(calls, 0);
+    });
+
+    test('caches Error results (unlike getOrFetch)', () {
+      final cache = ResultCache<String, int>();
+      var calls = 0;
+      for (var i = 0; i < 2; i++) {
+        cache.putIfAbsent('k', () {
+          calls++;
+          return const Error<int>(Failure.notFound());
+        });
+      }
+      expect(calls, 1);
+      expect(cache.get('k')?.isError, isTrue);
+    });
+  });
+
   group('ResultCache.getOrFetch', () {
     test('fetches and caches on miss', () async {
       final cache = ResultCache<String, int>();

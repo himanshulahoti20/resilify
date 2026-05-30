@@ -77,7 +77,7 @@ system forces you to handle.
 
 ```yaml
 dependencies:
-  resilify: ^1.0.0
+  resilify: ^1.2.0
 ```
 
 Then add the transports you need (already pulled in transitively by the
@@ -247,6 +247,92 @@ ws.send(jsonEncode({'subscribe': 'ticker'}));
 
 ---
 
+## Bulkhead — bound in-flight concurrency
+
+Cap the number of simultaneously in-flight calls so one slow dependency
+cannot exhaust client-side resources. Overflow callers queue up to
+`maxQueueSize` (FIFO); past that, they fast-fail with
+`Failure.bulkheadRejected()` instead of being kept waiting:
+
+```dart
+final bulkhead = Bulkhead(maxConcurrent: 8, maxQueueSize: 16);
+
+final result = await bulkhead.execute(() => api.fetchUser(id));
+// If the bulkhead is full, `result` is an Error with
+// FailureKind.bulkheadRejected — the underlying call was not made.
+```
+
+Composes naturally with `CircuitBreaker`, `RetryHelper`, and
+`ResultCache` — wrap the bulkhead around the call to bound resource use,
+then layer retries / caching outside it as needed.
+
+---
+
+## Circuit breaker — fail fast on a sick dependency
+
+```dart
+final breaker = CircuitBreaker(
+  failureThreshold: 5,
+  resetTimeout: const Duration(seconds: 30),
+);
+
+final result = await breaker.execute(() => api.fetchUser(id));
+// While open, calls fast-fail with FailureKind.circuitOpen without
+// invoking the underlying operation.
+```
+
+---
+
+## Partition a batch — successes and failures side by side
+
+`Result.collect` short-circuits on the first failure. When you instead
+want partial progress alongside everything that failed, use
+`Result.partition`:
+
+```dart
+final (saved, errors) = Result.partition(
+  await Future.wait(orders.map(api.save)),
+);
+log.info('saved ${saved.length}, failed ${errors.length}');
+```
+
+---
+
+## Recover, ensure, and finally
+
+```dart
+// Synchronously substitute a fallback for an Error.
+final user = cachedResult.recover((f) => User.guest());
+
+// Validate a Success post-hoc; convert to Error if a domain check fails.
+final order = orderResult.ensure(
+  (o) => o.items.isNotEmpty,
+  (o) => const Failure.badResponse(message: 'Empty order'),
+);
+
+// Run async cleanup regardless of variant — even if the future throws.
+await api.fetchUser(id).onFinallyAsync(() => spinner.dismiss());
+```
+
+---
+
+## Result cache
+
+```dart
+final cache = ResultCache<String, User>(ttl: const Duration(minutes: 5));
+
+// Async fetch-on-miss; only Successes are memoized.
+final user = await cache.getOrFetch(id, () => api.fetchUser(id));
+
+// Synchronous insert-only-if-missing; caches Errors too.
+final cfg = cache.putIfAbsent('cfg', () => Result.success(loadConfig()));
+
+// Tag-style bulk eviction.
+cache.invalidateWhere((k) => k.startsWith('user:'));
+```
+
+---
+
 ## Retry with exponential backoff
 
 ```dart
@@ -287,11 +373,19 @@ final dio = Dio()
 | `Failure`                         | Structured error value with named constructors   |
 | `Result.when` / `fold`            | Pattern-match on success / error                 |
 | `Result.map` / `flatMap`          | Transform / chain successful results             |
+| `Result.recover` / `recoverWith`  | Sync fallback from `Error` to `Success`          |
+| `Result.ensure`                   | Post-success validation: `Success` → `Error`     |
+| `Result.collect` / `partition`    | Combine many results (short-circuit vs split)    |
 | `Result.getOrElse` / `getOrThrow` | Unwrap with default or escalate to exception     |
 | `Future<Result>.mapAsync` etc.    | Async transformations without nesting            |
+| `Future<Result>.onFinallyAsync`   | Async finally hook, runs even on throw           |
 | `Stream<Result>.dataStream` etc.  | Stream-friendly helpers                          |
 | `Result<List>.mapList` / `filter` | Operate on the underlying collection             |
 | `RetryHelper.retry`               | Backoff-driven retries with predicates           |
+| `CircuitBreaker`                  | Fast-fail when a dependency keeps failing        |
+| `Bulkhead`                        | Cap concurrent in-flight calls with FIFO queue   |
+| `ResultCache`                     | TTL cache: `getOrFetch`, `putIfAbsent`, `keys`   |
+| `ResultDeduplicator`              | Collapse concurrent calls per key                |
 | `HttpResultHandler`               | `package:http` adapter                           |
 | `DioResultHandler`                | `Dio` adapter incl. upload/download              |
 | `ResultLoggerInterceptor`         | Pretty Dio interceptor                           |

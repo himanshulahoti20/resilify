@@ -247,6 +247,37 @@ void main() {
       expect(called, isFalse);
       expect(out, const Success<int>(3));
     });
+
+    test('onFinallyAsync runs after Success and returns result', () async {
+      var ranAfter = false;
+      final out = await Future<Result<int>>.value(
+        const Success<int>(5),
+      ).onFinallyAsync(() async {
+        await Future<void>.delayed(Duration.zero);
+        ranAfter = true;
+      });
+      expect(ranAfter, isTrue);
+      expect(out, const Success<int>(5));
+    });
+
+    test('onFinallyAsync runs after Error and returns result', () async {
+      var ranAfter = false;
+      final out = await Future<Result<int>>.value(
+        const Error<int>(Failure.serverError()),
+      ).onFinallyAsync(() async => ranAfter = true);
+      expect(ranAfter, isTrue);
+      expect(out.isError, isTrue);
+    });
+
+    test('onFinallyAsync runs even when the future throws', () async {
+      var ranAfter = false;
+      await expectLater(
+        Future<Result<int>>.error(StateError('boom'))
+            .onFinallyAsync(() async => ranAfter = true),
+        throwsStateError,
+      );
+      expect(ranAfter, isTrue);
+    });
   });
 
   group('FutureToResultX (asResult)', () {

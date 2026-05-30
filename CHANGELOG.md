@@ -5,6 +5,53 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 1.2.0
+
+### Added
+
+- **`Bulkhead`** — concurrency limiter for `Result`-returning operations.
+  Caps the number of simultaneously in-flight calls at `maxConcurrent`
+  and queues the overflow up to `maxQueueSize` (FIFO). When both the
+  in-flight slots and the queue are full, additional callers fast-fail
+  with `Error(Failure.bulkheadRejected())` instead of being kept
+  waiting. Composes naturally with `CircuitBreaker`, `RetryHelper`, and
+  `ResultCache`.
+
+  ```dart
+  final bulkhead = Bulkhead(maxConcurrent: 8, maxQueueSize: 16);
+  final result = await bulkhead.execute(() => api.fetchUser(id));
+  ```
+
+- **`FailureKind.bulkheadRejected` + `FailureType.bulkheadRejected` +
+  `Failure.bulkheadRejected()`** — categorical tag and named
+  constructor for bulkhead overflow. Treated as transient by
+  `Failure.isRetryable`, so retry helpers will back off and try again
+  rather than surfacing it as a permanent failure.
+
+- **`Result.partition()`** — splits an `Iterable<Result<T>>` into two
+  parallel unmodifiable lists `(List<T> successes, List<Failure>
+  failures)`, preserving order. Non-short-circuiting counterpart to
+  `Result.collect()` — useful for batch operations where you want to
+  surface partial progress alongside the failures.
+
+  ```dart
+  final (saved, errors) = Result.partition(
+    await Future.wait(orders.map(api.save)),
+  );
+  ```
+
+- **`ResultCache.putIfAbsent()`** — synchronous, atomic insert-only-if-
+  missing. Mirrors `Map.putIfAbsent` semantics: also caches `Error`
+  results (unlike `getOrFetch`, which only memoizes successes), making
+  it useful for memoizing pure computations or pre-resolved
+  `Result`s.
+
+- **`FutureResultX.onFinallyAsync()`** — async finally-style hook that
+  runs an `async` callback regardless of variant (and even if the
+  underlying future throws), then returns the original result. Useful
+  for releasing tokens, closing transient resources, or dismissing UI
+  state without coupling to success/error handling.
+
 ## 1.1.1
 
 ### Added

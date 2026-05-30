@@ -304,4 +304,45 @@ void main() {
       expect(r.dataOrNull, isEmpty);
     });
   });
+
+  group('Result.partition', () {
+    test('splits successes and failures preserving order', () {
+      const f1 = Failure.notFound();
+      const f2 = Failure.serverError();
+      final (ok, errs) = Result.partition<int>([
+        const Success<int>(1),
+        const Error<int>(f1),
+        const Success<int>(2),
+        const Error<int>(f2),
+        const Success<int>(3),
+      ]);
+      expect(ok, equals([1, 2, 3]));
+      expect(errs, equals([f1, f2]));
+    });
+
+    test('does not short-circuit on the first error', () {
+      final (ok, errs) = Result.partition<int>([
+        const Error<int>(Failure.notFound()),
+        const Success<int>(1),
+        const Error<int>(Failure.serverError()),
+      ]);
+      expect(ok, equals([1]));
+      expect(errs.length, 2);
+    });
+
+    test('empty input yields two empty lists', () {
+      final (ok, errs) = Result.partition<int>(const <Result<int>>[]);
+      expect(ok, isEmpty);
+      expect(errs, isEmpty);
+    });
+
+    test('returned lists are unmodifiable', () {
+      final (ok, errs) = Result.partition<int>([const Success<int>(1)]);
+      expect(() => ok.add(2), throwsUnsupportedError);
+      expect(
+        () => errs.add(const Failure.notFound()),
+        throwsUnsupportedError,
+      );
+    });
+  });
 }
