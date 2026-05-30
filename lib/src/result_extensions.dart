@@ -239,6 +239,18 @@ extension FutureResultX<T> on Future<Result<T>> {
     if (result case Error<T>(:final failure)) await action(failure);
     return result;
   }
+
+  /// Awaits this future, then runs [action] regardless of variant before
+  /// returning the result unchanged. Async finally-style hook for cleanup
+  /// like dismissing a spinner, releasing a token, or closing a transient
+  /// resource. The cleanup runs even if [action] is itself async.
+  Future<Result<T>> onFinallyAsync(Future<void> Function() action) async {
+    try {
+      return await this;
+    } finally {
+      await action();
+    }
+  }
 }
 
 /// Bridges a regular `Future<T>` (which signals failure by throwing) into a

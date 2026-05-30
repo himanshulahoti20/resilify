@@ -60,6 +60,21 @@ class ResultCache<K, V> {
     return result;
   }
 
+  /// Returns the cached value for [key] if present and live; otherwise calls
+  /// [ifAbsent], stores its return value (regardless of variant), and
+  /// returns it. Synchronous counterpart to [getOrFetch] — useful for
+  /// memoizing pure computations or pre-resolved [Result]s.
+  ///
+  /// Unlike [getOrFetch], this also caches [Error] results, matching the
+  /// semantics of `Map.putIfAbsent`.
+  Result<V> putIfAbsent(K key, Result<V> Function() ifAbsent) {
+    final existing = get(key);
+    if (existing != null) return existing;
+    final value = ifAbsent();
+    put(key, value);
+    return value;
+  }
+
   /// Removes the entry for [key], if any.
   void invalidate(K key) => _store.remove(key);
 

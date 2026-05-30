@@ -51,6 +51,10 @@ enum FailureType {
   /// HTTP 422 — input failed server-side validation rules.
   validation,
 
+  /// A bulkhead concurrency limiter rejected the call because both the
+  /// in-flight slots and the queue were full.
+  bulkheadRejected,
+
   /// Catch-all for failures that do not fit any other category.
   unknown,
 }
