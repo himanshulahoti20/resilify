@@ -55,6 +55,9 @@ enum FailureType {
   /// in-flight slots and the queue were full.
   bulkheadRejected,
 
+  /// A rate limiter rejected the call because the token bucket was empty.
+  rateLimiterRejected,
+
   /// Catch-all for failures that do not fit any other category.
   unknown,
 }

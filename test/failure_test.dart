@@ -186,6 +186,10 @@ void main() {
       expect(const Failure.cancelled().isRetryable, isFalse);
     });
 
+    test('isRetryable is false for validation', () {
+      expect(const Failure.validation().isRetryable, isFalse);
+    });
+
     test('isRetryable for unknown falls back to code heuristics', () {
       expect(
         const Failure(message: 'mystery 503', code: 503).isRetryable,
@@ -211,6 +215,7 @@ void main() {
       expect(const Failure.rateLimit().kind, FailureKind.rateLimit);
       expect(const Failure.serverError().kind, FailureKind.serverError);
       expect(const Failure.cancelled().kind, FailureKind.cancelled);
+      expect(const Failure.validation().kind, FailureKind.validation);
       expect(const Failure.unknown().kind, FailureKind.unknown);
     });
 

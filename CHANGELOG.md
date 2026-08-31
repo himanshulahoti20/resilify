@@ -5,6 +5,59 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 1.3.0
+
+### Added
+
+- **`RateLimiter`** — token-bucket throughput limiter for `Result`-returning
+  operations. Admits up to `maxTokens` calls in a burst, then refills
+  continuously at a rate of `maxTokens` every `refillInterval`. Complements
+  [Bulkhead] (which limits concurrency, not throughput) — the right tool for
+  staying under an upstream API quota like "100 requests per minute". Calls
+  made with an empty bucket fast-fail with
+  `Error(Failure.rateLimiterRejected())` instead of the underlying operation
+  being invoked.
+
+  ```dart
+  final limiter = RateLimiter(
+    maxTokens: 100,
+    refillInterval: const Duration(minutes: 1),
+  );
+  final result = await limiter.execute(() => api.fetchUser(id));
+  ```
+
+  Also exposes `tryAcquire()` for gating non-`Result` work off the same
+  bucket, and `reset()` to refill immediately.
+
+- **`TimeoutPolicy`** — a `duration`-bound operation wrapper packaged as a
+  reusable object with the same `execute(() => ...)` shape as
+  `CircuitBreaker`, `Bulkhead`, and `RateLimiter`, so it composes by nesting
+  instead of being reapplied at every call site:
+
+  ```dart
+  final timeout = TimeoutPolicy(const Duration(seconds: 5));
+  final breaker = CircuitBreaker();
+
+  final result = await breaker.execute(
+    () => timeout.execute(() => api.fetchUser(id)),
+  );
+  ```
+
+- **`FailureKind.rateLimiterRejected` + `FailureType.rateLimiterRejected` +
+  `Failure.rateLimiterRejected()`** — categorical tag and named constructor
+  for rate-limiter overflow. Treated as transient by `Failure.isRetryable`.
+
+### Changed
+
+- **`Failure.validation()`** now sets `kind: FailureKind.validation` instead
+  of falling back to `FailureKind.unknown`. Adds the missing
+  `FailureKind.validation` enum value so kind-based dispatch (retry
+  policies, analytics buckets, `CircuitBreaker.shouldTrip`) can distinguish
+  a 422 validation failure from a genuinely unclassified one.
+  `Failure.validation().isRetryable` remains `false` — this only affects
+  code that inspects `kind` directly, not the existing code-based fallback
+  behavior it previously relied on.
+
 ## 1.2.0
 
 ### Added
