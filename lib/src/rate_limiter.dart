@@ -96,9 +96,8 @@ class RateLimiter {
     final elapsed = now.difference(_lastRefill);
     if (elapsed <= Duration.zero) return;
     _lastRefill = now;
-    final refilled = elapsed.inMicroseconds *
-        maxTokens /
-        refillInterval.inMicroseconds;
+    final refilled =
+        elapsed.inMicroseconds * maxTokens / refillInterval.inMicroseconds;
     _tokens = min(maxTokens.toDouble(), _tokens + refilled);
   }
 }
