@@ -257,7 +257,11 @@ Failure mapDioException(DioException e, [StackTrace? stackTrace]) {
             stackTrace: st,
           ),
       },
-    DioExceptionType.unknown => Failure.unknown(
+    // Wildcard rather than `DioExceptionType.unknown`: dio has added new
+    // enum members (e.g. `transformTimeout` in 5.10.0) within our `^5.3.0`
+    // constraint, so an exhaustive-by-name switch breaks whenever a caller
+    // resolves a newer dio than we were built against.
+    _ => Failure.unknown(
         message: e.message ?? 'Unknown error',
         cause: e,
         stackTrace: st,

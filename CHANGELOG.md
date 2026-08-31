@@ -47,6 +47,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `Failure.rateLimiterRejected()`** — categorical tag and named constructor
   for rate-limiter overflow. Treated as transient by `Failure.isRetryable`.
 
+### Fixed
+
+- **`mapDioException`** no longer switches on `DioExceptionType` by
+  exhaustively naming every member. Dio has added new enum values within
+  our `dio: ^5.3.0` constraint (e.g. `transformTimeout` in 5.10.0), which
+  broke compilation for anyone resolving a newer dio than this package was
+  last built against. The catch-all case now falls back to
+  `Failure.unknown()` for any type outside the categories we explicitly
+  handle, matching the previous behavior for `DioExceptionType.unknown`
+  while staying forward-compatible.
+
 ### Changed
 
 - **`Failure.validation()`** now sets `kind: FailureKind.validation` instead

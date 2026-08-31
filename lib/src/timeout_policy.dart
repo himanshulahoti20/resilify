@@ -33,6 +33,9 @@ class TimeoutPolicy {
   /// Runs [operation], returning `Error(Failure.timeout())` if it does not
   /// complete within [duration].
   Future<Result<T>> execute<T>(Future<Result<T>> Function() operation) =>
-      RetryHelper.withTimeout(operation, duration,
-          timeoutMessage: timeoutMessage);
+      RetryHelper.withTimeout(
+        operation,
+        duration,
+        timeoutMessage: timeoutMessage,
+      );
 }

@@ -76,7 +76,9 @@ void main() {
     test('asserts on invalid constructor args', () {
       expect(
         () => RateLimiter(
-            maxTokens: 0, refillInterval: const Duration(seconds: 1)),
+          maxTokens: 0,
+          refillInterval: const Duration(seconds: 1),
+        ),
         throwsA(isA<AssertionError>()),
       );
       expect(
