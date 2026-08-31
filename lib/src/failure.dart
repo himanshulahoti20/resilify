@@ -51,6 +51,13 @@ enum FailureKind {
   /// in-flight slots and the queue were full.
   bulkheadRejected,
 
+  /// A rate limiter rejected the call because the token bucket was empty.
+  rateLimiterRejected,
+
+  /// HTTP 422 — the request was well-formed but failed server-side
+  /// validation.
+  validation,
+
   /// Catch-all for unclassified failures.
   unknown,
 }
@@ -170,7 +177,7 @@ class Failure {
     this.stackTrace,
     this.cause,
   })  : retryAfter = null,
-        kind = FailureKind.unknown,
+        kind = FailureKind.validation,
         type = FailureType.validation;
 
   /// HTTP 429 — too many requests; the client should back off.
@@ -229,6 +236,18 @@ class Failure {
     this.retryAfter,
   })  : kind = FailureKind.bulkheadRejected,
         type = FailureType.bulkheadRejected;
+
+  /// A rate limiter rejected the call because the token bucket was empty.
+  /// Treated as a transient failure by [isRetryable]; callers may want to
+  /// back off using [retryAfter] before trying again.
+  const Failure.rateLimiterRejected({
+    this.message = 'Rate limiter rejected the call: bucket empty',
+    this.code,
+    this.stackTrace,
+    this.cause,
+    this.retryAfter,
+  })  : kind = FailureKind.rateLimiterRejected,
+        type = FailureType.rateLimiterRejected;
 
   /// Maps an HTTP status [code] onto the most specific named [Failure]
   /// constructor available, falling back to [Failure.badResponse] for any
@@ -315,10 +334,11 @@ class Failure {
   bool get is5xx => code != null && code! >= 500 && code! < 600;
 
   /// Whether this failure looks transient and worth retrying. Decided
-  /// primarily by [kind]: `network`, `timeout`, `serverError`, `rateLimit`
-  /// are retryable; `parsing`, `unauthorized`, `forbidden`, `notFound`,
-  /// `conflict`, `cancelled`, `badResponse` are not. For [FailureKind.unknown]
-  /// the decision falls back to [code] (5xx, 408, 429 retryable).
+  /// primarily by [kind]: `network`, `timeout`, `serverError`, `rateLimit`,
+  /// `bulkheadRejected`, `rateLimiterRejected` are retryable; `parsing`,
+  /// `unauthorized`, `forbidden`, `notFound`, `conflict`, `cancelled`,
+  /// `badResponse`, `validation` are not. For [FailureKind.unknown] the
+  /// decision falls back to [code] (5xx, 408, 429 retryable).
   bool get isRetryable {
     switch (kind) {
       case FailureKind.network:
@@ -326,6 +346,7 @@ class Failure {
       case FailureKind.serverError:
       case FailureKind.rateLimit:
       case FailureKind.bulkheadRejected:
+      case FailureKind.rateLimiterRejected:
         return true;
       case FailureKind.parsing:
       case FailureKind.unauthorized:
@@ -335,6 +356,7 @@ class Failure {
       case FailureKind.cancelled:
       case FailureKind.badResponse:
       case FailureKind.circuitOpen:
+      case FailureKind.validation:
         return false;
       case FailureKind.unknown:
         return is5xx || code == 408 || code == 429;

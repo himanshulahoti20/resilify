@@ -268,6 +268,26 @@ then layer retries / caching outside it as needed.
 
 ---
 
+## Rate limiter — bound throughput over time
+
+Unlike `Bulkhead` (which limits concurrency), `RateLimiter` limits
+*throughput* using a token bucket — the right tool for staying under an
+upstream API quota such as "100 requests per minute". Calls made with an
+empty bucket fast-fail with `Failure.rateLimiterRejected()`:
+
+```dart
+final limiter = RateLimiter(
+  maxTokens: 100,
+  refillInterval: const Duration(minutes: 1),
+);
+
+final result = await limiter.execute(() => api.fetchUser(id));
+// If the bucket is empty, `result` is an Error with
+// FailureKind.rateLimiterRejected — the underlying call was not made.
+```
+
+---
+
 ## Circuit breaker — fail fast on a sick dependency
 
 ```dart
@@ -279,6 +299,22 @@ final breaker = CircuitBreaker(
 final result = await breaker.execute(() => api.fetchUser(id));
 // While open, calls fast-fail with FailureKind.circuitOpen without
 // invoking the underlying operation.
+```
+
+---
+
+## Timeout policy — a reusable, composable deadline
+
+Same `execute(() => ...)` shape as `CircuitBreaker`, `Bulkhead`, and
+`RateLimiter`, so it nests instead of being reapplied at every call site:
+
+```dart
+final timeout = TimeoutPolicy(const Duration(seconds: 5));
+final breaker = CircuitBreaker();
+
+final result = await breaker.execute(
+  () => timeout.execute(() => api.fetchUser(id)),
+);
 ```
 
 ---
@@ -384,6 +420,8 @@ final dio = Dio()
 | `RetryHelper.retry`               | Backoff-driven retries with predicates           |
 | `CircuitBreaker`                  | Fast-fail when a dependency keeps failing        |
 | `Bulkhead`                        | Cap concurrent in-flight calls with FIFO queue   |
+| `RateLimiter`                     | Token-bucket cap on throughput over time         |
+| `TimeoutPolicy`                   | Reusable, composable per-call deadline           |
 | `ResultCache`                     | TTL cache: `getOrFetch`, `putIfAbsent`, `keys`   |
 | `ResultDeduplicator`              | Collapse concurrent calls per key                |
 | `HttpResultHandler`               | `package:http` adapter                           |
