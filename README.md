@@ -77,7 +77,7 @@ system forces you to handle.
 
 ```yaml
 dependencies:
-  resilify: ^1.2.0
+  resilify: ^1.4.0
 ```
 
 Then add the transports you need (already pulled in transitively by the
@@ -284,6 +284,9 @@ final limiter = RateLimiter(
 final result = await limiter.execute(() => api.fetchUser(id));
 // If the bucket is empty, `result` is an Error with
 // FailureKind.rateLimiterRejected — the underlying call was not made.
+
+// Tell the caller when to come back:
+final wait = limiter.retryAfter; // Duration.zero if a token is available
 ```
 
 ---
@@ -315,6 +318,25 @@ final breaker = CircuitBreaker();
 final result = await breaker.execute(
   () => timeout.execute(() => api.fetchUser(id)),
 );
+```
+
+```dart
+// Fail with Failure.timeout() instead of throwing, inline:
+final result = await api.fetchUser(id).withTimeout(const Duration(seconds: 5));
+```
+
+---
+
+## Failover — first success wins
+
+`Result.firstSuccess` runs attempts in order and stops at the first
+`Success`. If every attempt fails, you get the last `Error`:
+
+```dart
+final user = await Result.firstSuccess([
+  () => primaryApi.fetchUser(id),
+  () => replicaApi.fetchUser(id),
+]);
 ```
 
 ---
@@ -412,8 +434,10 @@ final dio = Dio()
 | `Result.recover` / `recoverWith`  | Sync fallback from `Error` to `Success`          |
 | `Result.ensure`                   | Post-success validation: `Success` → `Error`     |
 | `Result.collect` / `partition`    | Combine many results (short-circuit vs split)    |
+| `Result.firstSuccess`             | Failover chain: first `Success` wins             |
 | `Result.getOrElse` / `getOrThrow` | Unwrap with default or escalate to exception     |
 | `Future<Result>.mapAsync` etc.    | Async transformations without nesting            |
+| `Future<Result>.withTimeout`      | Timeout as `Failure.timeout()`, never throws     |
 | `Future<Result>.onFinallyAsync`   | Async finally hook, runs even on throw           |
 | `Stream<Result>.dataStream` etc.  | Stream-friendly helpers                          |
 | `Result<List>.mapList` / `filter` | Operate on the underlying collection             |
