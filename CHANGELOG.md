@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 1.4.0
+
+### Added
+
+- **`Result.firstSuccess`** — async failover chain. Runs each attempt in
+  order and returns the first `Success`, skipping the rest; if all fail,
+  returns the last `Error`.
+
+  ```dart
+  final user = await Result.firstSuccess([
+    () => primaryApi.fetchUser(id),
+    () => replicaApi.fetchUser(id),
+  ]);
+  ```
+
+- **`Future<Result<T>>.withTimeout(duration)`** — extension shorthand for
+  `RetryHelper.withTimeout`; returns `Error(Failure.timeout())` instead of
+  throwing.
+
+- **`RateLimiter.retryAfter`** — `Duration` until the next token is
+  available (`Duration.zero` if one already is), for "try again in N
+  seconds" messaging.
+
 ## 1.3.0
 
 ### Added

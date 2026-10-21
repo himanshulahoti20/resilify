@@ -58,6 +58,17 @@ class RateLimiter {
     return _tokens.floor();
   }
 
+  /// How long until the next token is available; [Duration.zero] if one
+  /// already is. Useful for surfacing "try again in N seconds" to callers.
+  Duration get retryAfter {
+    _refill();
+    if (_tokens >= 1) return Duration.zero;
+    return Duration(
+      microseconds:
+          ((1 - _tokens) * refillInterval.inMicroseconds / maxTokens).ceil(),
+    );
+  }
+
   /// Runs [operation] if a token is available, consuming one. Returns
   /// `Error(Failure.rateLimiterRejected())` without invoking [operation] if
   /// the bucket is empty.

@@ -345,4 +345,38 @@ void main() {
       );
     });
   });
+
+  group('Result.firstSuccess', () {
+    test('returns first success and skips later attempts', () async {
+      var calls = 0;
+      final r = await Result.firstSuccess<int>([
+        () async => const Error<int>(Failure.serverError()),
+        () async => const Success<int>(2),
+        () async {
+          calls++;
+          return const Success<int>(3);
+        },
+      ]);
+      expect(r, const Success<int>(2));
+      expect(calls, 0);
+    });
+
+    test('returns last error when all fail; empty yields error', () async {
+      final r = await Result.firstSuccess<int>([
+        () async => const Error<int>(Failure.serverError()),
+        () async => const Error<int>(Failure.notFound()),
+      ]);
+      expect(r.errorOrNull?.kind, FailureKind.notFound);
+      expect((await Result.firstSuccess<int>([])).isError, isTrue);
+    });
+  });
+
+  test('Future<Result>.withTimeout returns Failure.timeout when exceeded',
+      () async {
+    final r = await Future<Result<int>>.delayed(
+      const Duration(milliseconds: 50),
+      () => const Success<int>(1),
+    ).withTimeout(const Duration(milliseconds: 10));
+    expect(r.errorOrNull?.kind, FailureKind.timeout);
+  });
 }
