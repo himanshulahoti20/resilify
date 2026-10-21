@@ -144,6 +144,28 @@ sealed class Result<T> {
     return (List.unmodifiable(successes), List.unmodifiable(failures));
   }
 
+  /// Failover chain: runs each of [attempts] in order and returns the first
+  /// [Success]. Later attempts are not invoked once one succeeds. If every
+  /// attempt fails, returns the *last* [Error]; an empty [attempts] yields
+  /// `Error(Failure.unknown())`.
+  ///
+  /// ```dart
+  /// final user = await Result.firstSuccess([
+  ///   () => primaryApi.fetchUser(id),
+  ///   () => replicaApi.fetchUser(id),
+  /// ]);
+  /// ```
+  static Future<Result<T>> firstSuccess<T>(
+    Iterable<Future<Result<T>> Function()> attempts,
+  ) async {
+    Result<T> last = const Error(Failure.unknown(message: 'No attempts given'));
+    for (final attempt in attempts) {
+      last = await attempt();
+      if (last is Success<T>) return last;
+    }
+    return last;
+  }
+
   /// Async counterpart to [collect]. Awaits each future in [futures] in order,
   /// short-circuiting on the first [Error]; otherwise returns a list of all
   /// successful values in iteration order.

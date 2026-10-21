@@ -86,5 +86,19 @@ void main() {
         throwsA(isA<AssertionError>()),
       );
     });
+
+    test('retryAfter reports time until the next token', () {
+      final clock = _Clock();
+      final limiter = RateLimiter(
+        maxTokens: 1,
+        refillInterval: const Duration(seconds: 10),
+        clock: () => clock.now,
+      );
+      expect(limiter.retryAfter, Duration.zero);
+      limiter.tryAcquire();
+      expect(limiter.retryAfter, const Duration(seconds: 10));
+      clock.advance(const Duration(seconds: 4));
+      expect(limiter.retryAfter, const Duration(seconds: 6));
+    });
   });
 }

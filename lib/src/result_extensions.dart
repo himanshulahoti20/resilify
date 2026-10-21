@@ -3,6 +3,7 @@ library;
 
 import 'failure.dart';
 import 'result.dart';
+import 'retry_helper.dart';
 
 /// Synchronous helpers on [Result].
 extension ResultX<T> on Result<T> {
@@ -179,6 +180,16 @@ extension FutureResultX<T> on Future<Result<T>> {
       Error<T>(:final failure) => Error<R>(failure),
     };
   }
+
+  /// Fails with `Error(Failure.timeout())` instead of throwing if this future
+  /// does not complete within [duration]. Shorthand for
+  /// `RetryHelper.withTimeout`.
+  Future<Result<T>> withTimeout(Duration duration, {String? timeoutMessage}) =>
+      RetryHelper.withTimeout(
+        () => this,
+        duration,
+        timeoutMessage: timeoutMessage,
+      );
 
   /// Substitutes a default success value when the awaited result is an
   /// [Error]. The [recovery] callback receives the [Failure] so that you can
