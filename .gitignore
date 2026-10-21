@@ -38,3 +38,4 @@ doc/api/
 # Test coverage
 /coverage/
 .claude/
+.serena/
